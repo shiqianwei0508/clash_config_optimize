@@ -166,6 +166,17 @@ def merge_proxies(config_paths):
     return base
 
 
+def dedupe_proxies(proxies):
+    seen = set()
+    deduped = []
+    for proxy in proxies:
+        key = (proxy.get("server"), proxy.get("port"), proxy.get("type"))
+        if key not in seen:
+            seen.add(key)
+            deduped.append(proxy)
+    return deduped
+
+
 def main():
     parser = argparse.ArgumentParser(description="🛠️ Clash YAML 多文件合并优化工具")
     parser.add_argument("--clashconfig", nargs="+", required=True, help="多个原始配置路径")
@@ -178,13 +189,22 @@ def main():
             return
 
     config = merge_proxies(args.clashconfig)
-    proxies = config.get("proxies", [])
+    # proxies = config.get("proxies", [])
+    proxies = dedupe_proxies(config.get("proxies", []))
+    config["proxies"] = proxies
+
     if not proxies:
         print("⚠️ proxies 字段为空")
         return
 
     override_base_config(config)
-    config["proxy-groups"] = build_proxy_groups(group_proxy_names(proxies, group_keywords))
+    valid_names = {proxy.get("name") for proxy in proxies}
+
+    # config["proxy-groups"] = build_proxy_groups(group_proxy_names(proxies, group_keywords))
+
+    grouped = group_proxy_names(proxies, group_keywords)
+    config["proxy-groups"] = build_proxy_groups(grouped)
+
     save_yaml(config, args.newconfig)
 
     print(f"\n✅ 配置生成成功：{args.newconfig}")
