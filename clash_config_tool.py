@@ -48,16 +48,91 @@ def group_proxy_names(proxies, keyword_config):
         if not matched:
             groups["🧪 其它"].append(name)
     return groups
+#
+# def build_proxy_groups(groups):
+#     proxy_groups = []
+#
+#     # 🚀 节点选择 + ♻️ 自动选择
+#     proxy_groups.append({
+#         "name": "🚀 节点选择",
+#         "type": "select",
+#         "proxies": [DoubleQuotedScalarString("♻️ 自动选择")] +
+#                    [DoubleQuotedScalarString(f"{group}") for group, names in groups.items() if names]
+#     })
+#
+#     all_proxy_names = [name for proxy_list in groups.values() for name in proxy_list]
+#     proxy_groups.append({
+#         "name": "♻️ 自动选择",
+#         "type": "url-test",
+#         "url": "http://edge.microsoft.com/captiveportal/generate_204",
+#         "interval": 300,
+#         "tolerance": 50,
+#         "proxies": [DoubleQuotedScalarString(name) for name in all_proxy_names]
+#     })
+#
+#     # 每个地域分组
+#     for group_name, proxy_names in groups.items():
+#         if proxy_names:
+#             proxy_groups.append({
+#                 "name": f"{group_name}",
+#                 "type": "url-test",
+#                 "url": "http://edge.microsoft.com/captiveportal/generate_204",
+#                 "interval": 300,
+#                 "tolerance": 50,
+#                 "proxies": [DoubleQuotedScalarString(name) for name in proxy_names]
+#             })
+#
+#     # 服务入口分组
+#     services = ["🌍 国外媒体", "Ⓜ️ 微软服务", "🍎 苹果服务", "📲 电报信息"]
+#     full_refs = [DoubleQuotedScalarString("🚀 节点选择")] + [
+#         DoubleQuotedScalarString(f"{group}") for group, names in groups.items() if names
+#     ]
+#     for service in services:
+#         proxy_groups.append({
+#             "name": service,
+#             "type": "select",
+#             "proxies": full_refs
+#         })
+#
+#     # 固定分组
+#     fixed = [
+#         ("🎯 全球直连", ["DIRECT", "🚀 节点选择", "♻️ 自动选择"]),
+#         ("🛑 全球拦截", ["REJECT", "DIRECT"]),
+#         ("🍃 应用净化", ["REJECT", "DIRECT"]),
+#         ("🐟 漏网之鱼", ["🚀 节点选择", "🎯 全球直连", "♻️ 自动选择"])
+#     ]
+#     for name, proxies in fixed:
+#         proxy_groups.append({
+#             "name": name,
+#             "type": "select",
+#             "proxies": [DoubleQuotedScalarString(p) for p in proxies]
+#         })
+#
+#     return proxy_groups
+
 
 def build_proxy_groups(groups):
     proxy_groups = []
 
     # 🚀 节点选择 + ♻️ 自动选择
+    # proxy_groups.append({
+    #     "name": "🚀 节点选择",
+    #     "type": "select",
+    #     "proxies": [DoubleQuotedScalarString("♻️ 自动选择")] +
+    #                [DoubleQuotedScalarString(f"{group}") for group, names in groups.items() if names]
+    # })
+
+    proxies_for_entry = [DoubleQuotedScalarString("♻️ 自动选择")]
+
+    for group_name, proxy_names in groups.items():
+        if proxy_names:
+            proxies_for_entry.append(DoubleQuotedScalarString(group_name))  # url-test 分组
+            proxies_for_entry.append(DoubleQuotedScalarString(f"{group_name}🌀"))  # load-balance 分组
+
     proxy_groups.append({
         "name": "🚀 节点选择",
         "type": "select",
-        "proxies": [DoubleQuotedScalarString("♻️ 自动选择")] +
-                   [DoubleQuotedScalarString(f"{group}") for group, names in groups.items() if names]
+        "proxies": proxies_for_entry
     })
 
     all_proxy_names = [name for proxy_list in groups.values() for name in proxy_list]
@@ -70,23 +145,39 @@ def build_proxy_groups(groups):
         "proxies": [DoubleQuotedScalarString(name) for name in all_proxy_names]
     })
 
-    # 每个地域分组
+    # 🌎 地域分组 + 🌐 均衡分组
     for group_name, proxy_names in groups.items():
         if proxy_names:
+            proxies = [DoubleQuotedScalarString(name) for name in proxy_names]
+            # url-test 分组
             proxy_groups.append({
                 "name": f"{group_name}",
                 "type": "url-test",
                 "url": "http://edge.microsoft.com/captiveportal/generate_204",
                 "interval": 300,
                 "tolerance": 50,
-                "proxies": [DoubleQuotedScalarString(name) for name in proxy_names]
+                "proxies": proxies
+            })
+            # load-balance 分组（名字加后缀）
+            proxy_groups.append({
+                "name": f"{group_name}🌀",
+                "type": "load-balance",
+                "strategy": "round-robin",
+                "proxies": proxies
             })
 
-    # 服务入口分组
+    # 服务入口分组（仍然引用 url-test 分组）
     services = ["🌍 国外媒体", "Ⓜ️ 微软服务", "🍎 苹果服务", "📲 电报信息"]
-    full_refs = [DoubleQuotedScalarString("🚀 节点选择")] + [
-        DoubleQuotedScalarString(f"{group}") for group, names in groups.items() if names
-    ]
+    # full_refs = [DoubleQuotedScalarString("🚀 节点选择")] + [
+    #     DoubleQuotedScalarString(f"{group}") for group, names in groups.items() if names
+    # ]
+    full_refs = [DoubleQuotedScalarString("🚀 节点选择")]
+
+    for group_name, proxy_names in groups.items():
+        if proxy_names:
+            full_refs.append(DoubleQuotedScalarString(group_name))  # url-test 分组
+            full_refs.append(DoubleQuotedScalarString(f"{group_name}🌀"))  # load-balance 分组
+
     for service in services:
         proxy_groups.append({
             "name": service,
@@ -109,6 +200,7 @@ def build_proxy_groups(groups):
         })
 
     return proxy_groups
+
 
 def override_base_config(config):
     config.pop("mixed-port", None)
