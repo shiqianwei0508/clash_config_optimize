@@ -61,7 +61,8 @@ def build_proxy_groups(groups):
     proxy_groups.append({
         "name": "🚀 节点选择",
         "type": "select",
-        "proxies": [DoubleQuotedScalarString("♻️ 自动选择")] + [DoubleQuotedScalarString(f"{group}-group") for group, names in groups.items() if names]
+        "proxies": [DoubleQuotedScalarString("♻️ 自动选择")] +
+                   [DoubleQuotedScalarString(f"{group}") for group, names in groups.items() if names]
     })
 
     all_proxy_names = [name for proxy_list in groups.values() for name in proxy_list]
@@ -77,7 +78,7 @@ def build_proxy_groups(groups):
     for group_name, proxy_names in groups.items():
         if proxy_names:
             proxy_groups.append({
-                "name": f"{group_name}-group",
+                "name": f"{group_name}",
                 "type": "url-test",
                 "url": "http://edge.microsoft.com/captiveportal/generate_204",
                 "interval": 300,
@@ -87,7 +88,7 @@ def build_proxy_groups(groups):
 
     services = ["🌍 国外媒体", "Ⓜ️ 微软服务", "🍎 苹果服务", "📲 电报信息"]
     full_refs = [DoubleQuotedScalarString("🚀 节点选择")] + [
-        DoubleQuotedScalarString(f"{group}-group") for group, names in groups.items() if names
+        DoubleQuotedScalarString(f"{group}") for group, names in groups.items() if names
     ]
     for service in services:
         proxy_groups.append({
