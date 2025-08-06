@@ -1,24 +1,23 @@
-# 🛠️ Clash Config Tool
 
-**clash_config_tool.py** 是一个用于自动优化 Clash YAML 配置文件的 Python 工具。它支持节点自动分组、生成 Proxy-Groups、替换端口设置、重排序配置字段，并保留 YAML 注释结构。
+# 🛠️ Clash Config Optimizer
+
+**clash_config_tool.py** 是一个用于优化 Clash 配置文件的 Python 工具，支持多个 YAML 文件合并、节点分组自动识别、基础字段重排、去重代理、生成标准 Proxy-Groups 等功能。
 
 ---
 
-## ✨ 功能特点
+## ✨ 功能特色
 
-- ✅ 自动识别节点名称，按国家/服务分类分组
-- ♻️ 生成自动测速分组 (`url-test`)
-- 🚀 创建统一入口分组 (`select`)
-- 🎯 添加常用固定策略分组（如「全球直连」「电报服务」等）
-- 🔧 端口配置替换为：`port: 7890` / `socks-port: 7891`
-- 📎 删除 `mixed-port` 并重排字段顺序
-- 💬 保留原配置文件注释与格式（基于 `ruamel.yaml`）
+- ✅ 支持多个 YAML 配置文件合并（只保留第一个文件的基础字段）
+- 🔧 自动设置 port / socks-port / allow-lan 字段顺序
+- 🚀 节点分组自动识别（按国家、服务关键词匹配）
+- ♻️ 自动生成 `proxy-groups`（支持自动选择、分国家区域测速分组）
+- 📦 保留 YAML 注释与原始格式（使用 `ruamel.yaml`）
 
 ---
 
 ## 📦 安装依赖
 
-本工具基于 [`ruamel.yaml`](https://pypi.org/project/ruamel.yaml/) 实现 YAML 读写操作：
+请先安装 `ruamel.yaml`：
 
 ```bash
 pip install ruamel.yaml
@@ -26,58 +25,88 @@ pip install ruamel.yaml
 
 ---
 
-## 🚀 使用方法
+## 🚀 命令使用方法
 
 ```bash
 python clash_config_tool.py \
-  --clashconfig clash.yaml \
-  --newconfig clash_optimized.yaml
+  --clashconfig config1.yaml config2.yaml config3.yaml \
+  --newconfig optimized.yaml
 ```
-
-参数说明：
 
 | 参数            | 说明                          |
 |-----------------|-------------------------------|
-| `--clashconfig` | 原始 Clash 配置文件路径       |
-| `--newconfig`   | 输出优化后的配置文件路径      |
-
-执行后将在终端输出分组生成统计，并保存新配置文件到指定路径。
+| `--clashconfig` | 一个或多个待合并的 YAML 文件 |
+| `--newconfig`   | 输出的新 YAML 文件路径       |
 
 ---
 
-## 🧠 节点自动分组逻辑
+## 🧩 节点自动分组逻辑
 
-工具通过关键字匹配将节点分为多个分组，当前内置支持如下国家与服务类型：
+节点根据以下关键字自动分组（按优先匹配）：
 
-| 分组名              | 匹配关键字示例                              |
-|---------------------|---------------------------------------------|
-| 🇭🇰 HONGKONG         | HK, Hong Kong, HKG, 香港                    |
-| 🇯🇵 JAPAN            | JP, Japan, Tokyo, 日本                      |
-| 🇰🇷 KOREA            | KR, Korea, 韩国                             |
-| 🇺🇸 USA              | US, United States, CA, Canada, 美国, 加拿大 |
-| 🇸🇬 SINGAPORE        | SG, Singapore, 新加坡                      |
-| 🇨🇳 CHINA            | CN, China, 中国                             |
-| 🇪🇺 EUROPE           | EU, Europe, DE, GB, FR, 欧洲                |
-| 🚀 TG_PROXY          | TG, Telegram, t.me                          |
-| 📦 OTHER / 🧪 MISC    | 无匹配关键词时默认分组                     |
-
----
-
-## 📁 输出 Proxy-Groups 示例
-
-自动生成的 Proxy-Groups 包含：
-
-- ♻️ 自动选择（全部节点测速）
-- 🚀 节点选择（包含所有地域分组）
-- 各国分组（如 🇯🇵 JAPAN-group）
-- 固定策略分组（🎯 全球直连、🛑 拦截等）
-- 服务入口（🌍 国外媒体、Ⓜ️ 微软服务、📲 电报信息）
+| 分组名      | 匹配关键字（包含但不限于）                     |
+|-------------|------------------------------------------------|
+| 🇭🇰 香港     | HK, Hong Kong, HKG, 香港                       |
+| 🇯🇵 日本     | JP, Japan, Tokyo, 日本                         |
+| 🇰🇷 韩国     | KR, Korea, 韩国                                |
+| 🇺🇸 美国     | US, United States, CA, Canada, 美国, 加拿大    |
+| 🇸🇬 新加坡   | SG, Singapore, 新加坡                         |
+| 🇨🇳 中国     | CN, China, 中国                                |
+| 🇪🇺 欧洲     | EU, Europe, DE, GB, FR, 欧洲                   |
+| 🚀 TG代理    | TG, Telegram, t.me                            |
+| 📦 其他      | Other                                          |
+| 🧪 其它      | 未匹配任何关键词的节点                        |
 
 ---
 
-## 🛠️ 配置文件字段优化
+## 📄 Proxy-Groups 自动生成结构
 
-该工具会自动设置以下字段，替换原配置中的 `mixed-port`：
+示例结构：
+
+```yaml
+proxy-groups:
+  - name: 🚀 节点选择
+    type: select
+    proxies:
+      - ♻️ 自动选择
+      - 🇭🇰 香港
+      - 🇯🇵 日本
+      ...
+
+  - name: ♻️ 自动选择
+    type: url-test
+    proxies:
+      - 节点1
+      - 节点2
+      ...
+
+  - name: 🇭🇰 香港
+    type: url-test
+    proxies:
+      - 节点HK1
+      - 节点HK2
+
+  - name: 🌍 国外媒体
+    type: select
+    proxies:
+      - 🚀 节点选择
+      - 🇭🇰 香港
+      - 🇯🇵 日本
+      ...
+
+  - name: 🎯 全球直连
+    type: select
+    proxies:
+      - DIRECT
+      - 🚀 节点选择
+      - ♻️ 自动选择
+```
+
+---
+
+## 🔧 配置字段优化说明
+
+自动设置字段顺序（如存在）：
 
 ```yaml
 port: 7890
@@ -85,6 +114,41 @@ socks-port: 7891
 allow-lan: true
 ```
 
-上述字段将按顺序插入 YAML 顶部，确保规范性和可读性。
+并删除：
 
+```yaml
+mixed-port: (如果存在则移除)
+```
+
+---
+
+## ✅ 输出验证提示
+
+运行结束后将输出如下信息：
+
+```
+✅ 配置生成成功：optimized.yaml
+📦 分组数：12
+   - 🚀 节点选择: 10 个节点
+   - ♻️ 自动选择: 50 个节点
+   ...
+```
+
+---
+
+## 💬 建议与扩展
+
+如需扩展功能，比如：
+
+- 合并规则 (`rules`)
+- 统一 DNS 配置
+- 支持分组优先级排序或跳过某些文件字段
+
+请在原脚本基础上添加定制逻辑，或欢迎反馈需求进行扩展。
+
+---
+
+## 📄 许可证
+
+本工具可自由修改与使用，适用于 Clash 配置优化自动化场景。
 
