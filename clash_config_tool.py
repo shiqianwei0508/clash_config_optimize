@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import argparse
-import os
+# import os
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 from ruamel.yaml.comments import CommentedMap
@@ -167,15 +167,38 @@ def merge_proxies(config_paths):
     return base
 
 
-def dedupe_proxies(proxies):
+def dedupe_proxies(proxies, output_file="duplicates.txt"):
     seen = set()
     deduped = []
+    duplicates = []
+
     for proxy in proxies:
-        key = (proxy.get("server"), proxy.get("port"), proxy.get("type"))
+        proxy_type = proxy.get("type")
+        port = proxy.get("port")
+
+        # 使用不同的去重键
+        if proxy_type == "trojan":
+            key = (proxy.get("sni"), port, proxy_type)
+        else:
+            key = (proxy.get("server"), port, proxy_type)
+
         if key not in seen:
             seen.add(key)
             deduped.append(proxy)
+        else:
+            duplicates.append(proxy)
+
+    # 写入重复项到文件
+    if duplicates:
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(f"🔁 共合并重复节点：{len(duplicates)} 个\n")
+            f.write("📋 重复节点如下：\n")
+            for dup in duplicates:
+                f.write(f"  - {dup}\n")
+
     return deduped
+
+
 
 
 def main():
@@ -213,8 +236,11 @@ def main():
         print("⚠️ proxies 字段为空")
         return
 
+    # 覆盖基础配置
     override_base_config(config)
-    valid_names = {proxy.get("name") for proxy in proxies}
+
+
+    # valid_names = {proxy.get("name") for proxy in proxies}
 
     # config["proxy-groups"] = build_proxy_groups(group_proxy_names(proxies, group_keywords))
 

@@ -152,3 +152,4 @@ cython_debug/
 /webdriver/
 
 /*.yaml
+/duplicates.txt
