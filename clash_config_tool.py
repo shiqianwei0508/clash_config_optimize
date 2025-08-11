@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-# import os
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 from ruamel.yaml.comments import CommentedMap
@@ -191,7 +190,8 @@ def dedupe_proxies(proxies, output_file="duplicates.txt"):
     # 写入重复项到文件
     if duplicates:
         with open(output_file, "w", encoding="utf-8") as f:
-            f.write(f"🔁 共合并重复节点：{len(duplicates)} 个\n")
+            # f.write(f"🔁 共合并重复节点：{len(duplicates)} 个\n")
+            print(f"🔁 共合并重复节点：{len(duplicates)} 个\n")
             f.write("📋 重复节点如下：\n")
             for dup in duplicates:
                 f.write(f"  - {dup}\n")
