@@ -199,23 +199,13 @@ def dedupe_proxies(proxies, output_file="duplicates.txt"):
     return deduped
 
 
-
-
 def main():
     parser = argparse.ArgumentParser(description="🛠️ Clash YAML 多文件合并优化工具")
     parser.add_argument("--clashconfig", nargs="+", required=True, help="多个原始配置路径")
-    # parser.add_argument("--newconfig", required=True, help="输出配置路径")
     parser.add_argument("--newconfig", default="config.yaml", help="输出配置路径（默认：config.yaml）")
     args = parser.parse_args()
 
-    # for path in args.clashconfig:
-    #     if not os.path.exists(path):
-    #         print(f"❌ 缺少文件：{path}")
-    #         return
-
-    # config = merge_proxies(args.clashconfig)
-
-    # 替换原来的 clashconfig 处理逻辑
+    # clashconfig 参数值处理
     raw_paths = args.clashconfig
     expanded_paths = []
 
@@ -228,7 +218,7 @@ def main():
 
     config = merge_proxies(expanded_paths)
 
-    # proxies = config.get("proxies", [])
+    # 处理 proxies 字段
     proxies = dedupe_proxies(config.get("proxies", []))
     config["proxies"] = proxies
 
@@ -239,14 +229,10 @@ def main():
     # 覆盖基础配置
     override_base_config(config)
 
-
-    # valid_names = {proxy.get("name") for proxy in proxies}
-
-    # config["proxy-groups"] = build_proxy_groups(group_proxy_names(proxies, group_keywords))
-
     grouped = group_proxy_names(proxies, group_keywords)
     config["proxy-groups"] = build_proxy_groups(grouped)
 
+    # newconfig 参数值处理
     save_yaml(config, args.newconfig)
 
     print(f"\n✅ 配置生成成功：{args.newconfig}")
