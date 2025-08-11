@@ -155,15 +155,32 @@ def override_base_config(config):
 
 def merge_proxies(config_paths):
     all_configs = [load_yaml(p) for p in config_paths]
-    proxy_dict = OrderedDict()
+    all_proxies = []
+
     for conf in all_configs:
-        for proxy in conf.get("proxies", []):
-            name = proxy.get("name")
-            if name and name not in proxy_dict:
-                proxy_dict[name] = proxy
+        all_proxies.extend(conf.get("proxies", []))
+
     base = all_configs[0].copy()
-    base["proxies"] = list(proxy_dict.values())
+    base["proxies"] = all_proxies
     return base
+
+
+def rename_proxies(proxies):
+    renamed = []
+    name_count = {}
+
+    for proxy in proxies:
+        name = proxy.get("name", "")
+        prefix = name.split(" |")[0] if " |" in name else name
+        count = name_count.get(prefix, 1)
+
+        new_name = f"{prefix} | #{count}"
+        proxy["name"] = new_name
+        renamed.append(proxy)
+
+        name_count[prefix] = count + 1
+
+    return renamed
 
 
 def dedupe_proxies(proxies, output_file="duplicates.txt"):
@@ -218,8 +235,12 @@ def main():
 
     config = merge_proxies(expanded_paths)
 
-    # 处理 proxies 字段
+    # 更细致地去重（非仅靠 name）
     proxies = dedupe_proxies(config.get("proxies", []))
+
+    # ✅ 重命名所有节点，避免 name 冲突
+    proxies = rename_proxies(proxies)
+
     config["proxies"] = proxies
 
     if not proxies:
