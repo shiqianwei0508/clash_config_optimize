@@ -5,6 +5,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 from ruamel.yaml.comments import CommentedMap
 from collections import OrderedDict
+import glob
 
 # ✅ 分组关键词配置
 group_keywords = {
@@ -180,15 +181,30 @@ def dedupe_proxies(proxies):
 def main():
     parser = argparse.ArgumentParser(description="🛠️ Clash YAML 多文件合并优化工具")
     parser.add_argument("--clashconfig", nargs="+", required=True, help="多个原始配置路径")
-    parser.add_argument("--newconfig", required=True, help="输出配置路径")
+    # parser.add_argument("--newconfig", required=True, help="输出配置路径")
+    parser.add_argument("--newconfig", default="config.yaml", help="输出配置路径（默认：config.yaml）")
     args = parser.parse_args()
 
-    for path in args.clashconfig:
-        if not os.path.exists(path):
-            print(f"❌ 缺少文件：{path}")
-            return
+    # for path in args.clashconfig:
+    #     if not os.path.exists(path):
+    #         print(f"❌ 缺少文件：{path}")
+    #         return
 
-    config = merge_proxies(args.clashconfig)
+    # config = merge_proxies(args.clashconfig)
+
+    # 替换原来的 clashconfig 处理逻辑
+    raw_paths = args.clashconfig
+    expanded_paths = []
+
+    for pattern in raw_paths:
+        matched = glob.glob(pattern)
+        if not matched:
+            print(f"❌ 未匹配到文件：{pattern}")
+            return
+        expanded_paths.extend(matched)
+
+    config = merge_proxies(expanded_paths)
+
     # proxies = config.get("proxies", [])
     proxies = dedupe_proxies(config.get("proxies", []))
     config["proxies"] = proxies
