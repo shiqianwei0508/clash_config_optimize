@@ -3,7 +3,7 @@ import argparse
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 from ruamel.yaml.comments import CommentedMap
-from collections import OrderedDict
+# from collections import OrderedDict
 import glob
 
 # ✅ 分组关键词配置
@@ -19,6 +19,8 @@ group_keywords = {
     "📦 Other": ["Other"],
     "🧪 其它": []
 }
+
+generate_204_url = "https://clients3.google.com/generate_204"
 
 yaml = YAML()
 yaml.preserve_quotes = True
@@ -76,7 +78,7 @@ def build_proxy_groups(groups):
     proxy_groups.append({
         "name": "♻️ 自动选择",
         "type": "url-test",
-        "url": "http://edge.microsoft.com/captiveportal/generate_204",
+        "url": generate_204_url,
         "interval": 300,
         "tolerance": 50,
         "proxies": [DoubleQuotedScalarString(name) for name in all_proxy_names]
@@ -90,7 +92,7 @@ def build_proxy_groups(groups):
             proxy_groups.append({
                 "name": f"{group_name}",
                 "type": "url-test",
-                "url": "http://edge.microsoft.com/captiveportal/generate_204",
+                "url": generate_204_url,
                 "interval": 300,
                 "tolerance": 50,
                 "proxies": proxies
@@ -99,7 +101,9 @@ def build_proxy_groups(groups):
             proxy_groups.append({
                 "name": f"{group_name}🌀",
                 "type": "load-balance",
-                "strategy": "round-robin",
+                "url": generate_204_url,
+                "interval": 300,
+                "strategy": "consistent-hashing",
                 "proxies": proxies
             })
 
