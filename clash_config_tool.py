@@ -9,7 +9,7 @@ import geoip2.database
 from geoip2.errors import AddressNotFoundError
 import ipaddress
 
-from constants import generate_204_url, group_keywords
+from clash_optimizer.constants import generate_204_url, group_keywords
 
 yaml = YAML()
 yaml.preserve_quotes = True
@@ -84,7 +84,6 @@ def rename_proxies_by_geoip(proxies):
 
     print(f"📊 Dropped {dropped} node(s) due to DNS resolution failure.")
     return renamed
-
 
 
 def load_yaml(path):
