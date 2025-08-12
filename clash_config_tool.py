@@ -3,28 +3,87 @@ import argparse
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 from ruamel.yaml.comments import CommentedMap
-# from collections import OrderedDict
 import glob
+import dns.resolver
+import geoip2.database
+from geoip2.errors import AddressNotFoundError
+import ipaddress
 
-# ✅ 分组关键词配置
-group_keywords = {
-    "🇭🇰 香港": ["HK", "Hong Kong", "HKG", "香港"],
-    "🇯🇵 日本": ["JP", "Japan", "Tokyo", "日本"],
-    "🇰🇷 韩国": ["KR", "Korea", "韩国"],
-    "🇺🇸 美国": ["US", "United States", "美国", "美國", "CA", "Canada", "加拿大"],
-    "🇸🇬 新加坡": ["SG", "Singapore", "新加坡"],
-    "🇨🇳 中国": ["CN", "China", "中国"],
-    "🇪🇺 欧洲": ["EU", "Europe", "欧洲", "DE", "GB", "FR"],
-    "🚀 TG代理": ["t.me", "TG", "Telegram", "tg"],
-    "📦 Other": ["Other"],
-    "🧪 其它": []
-}
-
-generate_204_url = "https://clients3.google.com/generate_204"
+from constants import generate_204_url, group_keywords
 
 yaml = YAML()
 yaml.preserve_quotes = True
 yaml.indent(sequence=4, offset=2)
+
+
+# 解析域名到 IP 地址
+def resolve_domain(domain):
+    try:
+        answers = dns.resolver.resolve(domain, 'A')
+        ip = answers[0].to_text() if answers else None
+        print(f"🔍 Resolved {domain} → {ip}")
+        return ip
+    except Exception as e:
+        print(f"❌ Failed to resolve {domain}: {e}")
+        return None
+
+
+# 初始化 GeoIP2 数据库读取器
+reader = geoip2.database.Reader("mmdb/GeoLite2-Country.mmdb")
+
+
+# 获取 IP 地址对应的国家代码
+def get_country_code(ip):
+    try:
+        response = reader.country(ip)
+        code = response.country.iso_code
+        return code if code else "ZZ"
+    except AddressNotFoundError:
+        print(f"⚠️ IP not found in GeoIP database: {ip}")
+        return "ZZ"
+    except Exception as e:
+        print(f"❌ GeoIP lookup failed for {ip}: {e}")
+        return "ZZ"
+
+
+# 检查地址是否为有效的 IP 地址
+def is_ip(address):
+    try:
+        ipaddress.ip_address(address)
+        return True
+    except ValueError:
+        return False
+
+
+def detect_country_code(proxy):
+    server = proxy.get("server", "")
+    ip = server if is_ip(server) else resolve_domain(server)
+    return get_country_code(ip) if ip else "ZZ"
+
+
+def rename_proxies_by_geoip(proxies):
+    renamed = []
+    country_count = {}
+    dropped = 0
+
+    for proxy in proxies:
+        server = proxy.get("server", "")
+        ip = server if is_ip(server) else resolve_domain(server)
+
+        if not ip:
+            print(f"🗑️ Dropping node due to DNS failure: {server}")
+            dropped += 1
+            continue  # 跳过该节点
+
+        code = get_country_code(ip)
+        count = country_count.get(code, 1)
+        proxy["name"] = f"{code}_{count:02d}"
+        renamed.append(proxy)
+        country_count[code] = count + 1
+
+    print(f"📊 Dropped {dropped} node(s) due to DNS resolution failure.")
+    return renamed
+
 
 
 def load_yaml(path):
@@ -53,6 +112,21 @@ def group_proxy_names(proxies, keyword_config):
                 break
         if not matched:
             groups["🧪 其它"].append(name)
+    return groups
+
+
+def group_proxy_names_by_geoip(proxies):
+    groups = {key: [] for key in group_keywords.keys()}
+    for proxy in proxies:
+        code = detect_country_code(proxy)
+        matched = False
+        for group, keywords in group_keywords.items():
+            if code.upper() in [k.upper() for k in keywords]:
+                groups[group].append(proxy["name"])
+                matched = True
+                break
+        if not matched:
+            groups["🧪 其它"].append(proxy["name"])
     return groups
 
 
@@ -194,13 +268,16 @@ def dedupe_proxies(proxies, output_file="duplicates.txt"):
 
     for proxy in proxies:
         proxy_type = proxy.get("type")
-        port = proxy.get("port")
+        proxy_port = proxy.get("port")
+        proxy_server = proxy.get("server")
+        proxy_network = proxy.get("network")
 
         # 使用不同的去重键
-        if proxy_type == "trojan":
-            key = (proxy.get("sni"), port, proxy_type)
-        else:
-            key = (proxy.get("server"), port, proxy_type)
+        # if proxy_type == "trojan":
+        #     key = (proxy.get("sni"), proxy_port, proxy_type)
+        # else:
+        #     key = (proxy.get("server"), proxy_port, proxy_type)
+        key = (proxy_type, proxy_server, proxy_port, proxy_network)
 
         if key not in seen:
             seen.add(key)
@@ -243,7 +320,8 @@ def main():
     proxies = dedupe_proxies(config.get("proxies", []))
 
     # ✅ 重命名所有节点，避免 name 冲突
-    proxies = rename_proxies(proxies)
+    # proxies = rename_proxies(proxies)
+    proxies = rename_proxies_by_geoip(proxies)
 
     config["proxies"] = proxies
 
@@ -254,7 +332,9 @@ def main():
     # 覆盖基础配置
     override_base_config(config)
 
-    grouped = group_proxy_names(proxies, group_keywords)
+    # grouped = group_proxy_names(proxies, group_keywords)
+    grouped = group_proxy_names_by_geoip(proxies)
+
     config["proxy-groups"] = build_proxy_groups(grouped)
 
     # newconfig 参数值处理
