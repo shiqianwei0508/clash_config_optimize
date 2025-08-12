@@ -21,7 +21,7 @@ def resolve_domain(domain):
     try:
         answers = dns.resolver.resolve(domain, 'A')
         ip = answers[0].to_text() if answers else None
-        print(f"🔍 Resolved {domain} → {ip}")
+        # print(f"🔍 Resolved {domain} → {ip}")
         return ip
     except Exception as e:
         print(f"❌ Failed to resolve {domain}: {e}")
@@ -37,6 +37,7 @@ def get_country_code(ip):
     try:
         response = reader.country(ip)
         code = response.country.iso_code
+        # print(f"🌍 {ip} → {code}")
         return code if code else "ZZ"
     except AddressNotFoundError:
         print(f"⚠️ IP not found in GeoIP database: {ip}")
@@ -332,8 +333,8 @@ def main():
     # 覆盖基础配置
     override_base_config(config)
 
-    # grouped = group_proxy_names(proxies, group_keywords)
-    grouped = group_proxy_names_by_geoip(proxies)
+    grouped = group_proxy_names(proxies, group_keywords)
+    # grouped = group_proxy_names_by_geoip(proxies)
 
     config["proxy-groups"] = build_proxy_groups(grouped)
 
