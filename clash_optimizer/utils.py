@@ -30,8 +30,11 @@ def print_summary(config: dict) -> None:
 def generate_whitelist_rules(domains: list[str]) -> list[str]:
     return [f"DOMAIN-SUFFIX,{domain},🎯 全球直连" for domain in domains]
 
+
 def merge_rules(existing: list[str], extra: list[str]) -> list[str]:
-    combined = existing + extra
+    # 优先保留 extra（白名单规则）在前面
+    combined = extra + existing
+
     # 去重并保持顺序
     seen = set()
     deduped = []
