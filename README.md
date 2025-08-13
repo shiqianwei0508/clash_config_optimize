@@ -1,117 +1,97 @@
 # 🛠️ Clash YAML 多文件合并优化工具
 
-一个用于合并多个 Clash 配置文件、去重代理节点、智能分组并生成优化后的 YAML 配置的 Python 工具。支持节点重命名、地域分组、服务入口构建，适用于 Clash、Clash.Meta 等客户端。
+一个用于合并多个 Clash 配置文件、自动重命名节点、按国家分组、去重、规则增强的 Python 工具。支持 GeoIP 分类、白名单规则插入、协议过滤等高级功能。
 
 ---
 
 ## 🚀 功能特性
 
-- ✅ 支持多个 YAML 文件合并为一个配置
-- ✅ 基于 `(server, port, type)` 或 `(sni, port, type)` 去重代理节点
-- ✅ 自动重命名节点，避免 name 冲突
-- ✅ 按国家/地区关键词智能分组
-- ✅ 构建 `select`, `url-test`, `load-balance` 等多种分组类型
-- ✅ 自动生成服务入口分组（如 Telegram、Apple、Microsoft）
-- ✅ 输出重复节点到 `duplicates.txt` 文件
-- ✅ 可配置输出路径，默认生成 `config.yaml`
+- ✅ 合并多个 Clash YAML 配置文件
+- ✅ 自动去重代理节点（支持多维度去重）
+- ✅ 按 GeoIP 国家代码重命名节点（如 `US_01`, `JP_02`）
+- ✅ 按国家或关键词分组生成 `proxy-groups`
+- ✅ 自动插入白名单域名规则到 `rules` 字段顶部
+- ✅ 支持移除 trojan 类型节点（`--no-trojan`）
+- ✅ 保留原有规则并自动去重
 
 ---
 
 ## 📦 安装依赖
 
 ```bash
-pip install ruamel.yaml
+pip install ruamel.yaml dnspython geoip2
 ```
+
+GeoIP 数据库请放置于：
+
+```
+mmdb/GeoLite2-Country.mmdb
+```
+
+你可以从 MaxMind 官网下载免费版本。
 
 ---
 
-## 📂 使用方法
+## 📂 使用方式
 
 ```bash
-python clash_config_tool.py --clashconfig <配置文件1.yaml> <配置文件2.yaml> ... --newconfig <输出文件路径>
+python main.py \
+  --clashconfig configs/*.yaml \
+  --newconfig merged.yaml \
+  --no-trojan
 ```
 
-### ✅ 示例命令
+### 参数说明：
 
-```bash
-python clash_config_tool.py --clashconfig configs/08*.yaml configs/09*.yaml --newconfig merged.yaml
-```
-
-> 支持通配符匹配，自动展开多个文件。
-
----
-
-## 🧾 参数说明
-
-| 参数名         | 类型       | 说明 |
-|----------------|------------|------|
-| `--clashconfig` | `list[str]` | 一个或多个原始 Clash 配置文件路径，支持通配符 |
-| `--newconfig`   | `str`       | 输出配置文件路径，默认为 `config.yaml` |
+| 参数             | 说明                                       |
+|------------------|--------------------------------------------|
+| `--clashconfig`  | 输入的多个配置文件路径（支持通配符）       |
+| `--newconfig`    | 输出的合并配置文件路径（默认：`config.yaml`） |
+| `--no-trojan`    | 移除所有 `trojan` 类型节点（可选）         |
 
 ---
 
-## 🧠 去重逻辑说明
+## 🧩 白名单规则插入
 
-- 对非 `trojan` 节点：使用 `(server, port, type)` 去重
-- 对 `trojan` 节点：使用 `(sni, port, type)` 去重
-- 所有重复节点将写入 `duplicates.txt` 文件，供人工审查
-
----
-
-## 🧩 节点重命名策略
-
-将所有节点按前缀进行编号，避免 name 冲突：
-
-```yaml
-🇺🇸US_1 | #1
-🇺🇸US_1 | #2
-```
-
----
-
-## 🌍 分组关键词配置
-
-内置地域关键词自动分组：
+你可以在 `constants.py` 中配置白名单域名：
 
 ```python
-group_keywords = {
-  "🇭🇰 香港": ["HK", "Hong Kong", "HKG", "香港"],
-  "🇯🇵 日本": ["JP", "Japan", "Tokyo", "日本"],
-  ...
-}
+whitelist_domains = [
+    "gbim.vip",
+    "corp.local",
+    "internal.net"
+]
+```
+
+这些域名将自动生成如下规则并插入到配置顶部：
+
+```yaml
+rules:
+  - DOMAIN-SUFFIX,gbim.vip,🎯 全球直连
+  - DOMAIN-SUFFIX,corp.local,🎯 全球直连
 ```
 
 ---
 
-## 📐 输出结构说明
+## 🧠 项目结构
 
-生成的配置包含以下分组：
-
-- `🚀 节点选择`：入口选择分组
-- `♻️ 自动选择`：测速自动选择分组
-- `🇺🇸 美国`, `🇯🇵 日本` 等地域分组（`url-test` + `load-balance`）
-- `🌍 国外媒体`, `Ⓜ️ 微软服务` 等服务入口分组
-- `🎯 全球直连`, `🛑 全球拦截` 等固定策略分组
-
----
-
-## 📄 输出文件示例
-
-- `merged.yaml`：合并后的 Clash 配置文件
-- `duplicates.txt`：被识别为重复的节点列表
+```
+clash_optimizer/
+├── main.py                  # CLI 入口
+├── resolver.py              # 域名解析
+├── geoip.py                 # GeoIP 查询
+├── proxy_manager.py         # 节点管理（去重、重命名、过滤）
+├── config_builder.py        # 构建 proxy-groups
+├── utils.py                 # 通用工具函数
+├── constants.py             # 常量配置（关键词、白名单等）
+└── mmdb/                    # GeoIP 数据库
+```
 
 ---
 
-## 🧪 推荐使用场景
+## 📜 License
 
-- 多个 Clash 配置文件合并优化
-- 节点去重与重命名
-- 自动构建分组与服务入口
-- 适配 Clash.Meta、Clash Verge 等高级客户端
+MIT License
 
 ---
-
-## 📬 联系与反馈
-
-如需定制功能或报告问题，请提交 Issue 或联系维护者。
 
