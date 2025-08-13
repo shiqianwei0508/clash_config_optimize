@@ -105,3 +105,10 @@ group_keywords = {
 
 # 用于生成 204 响应的 URL
 generate_204_url = "https://clients3.google.com/generate_204"
+
+# 直连域名
+whitelist_domains = [
+    "gbim.vip",
+    "freedo3d.com",
+    "freedoonline.com"
+]

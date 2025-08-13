@@ -25,3 +25,19 @@ def print_summary(config: dict) -> None:
     print(f"📦 分组数：{len(config['proxy-groups'])}")
     for g in config["proxy-groups"]:
         print(f"   - {g['name']}: {len(g.get('proxies', []))} 个节点")
+
+
+def generate_whitelist_rules(domains: list[str]) -> list[str]:
+    return [f"DOMAIN-SUFFIX,{domain},🎯 全球直连" for domain in domains]
+
+def merge_rules(existing: list[str], extra: list[str]) -> list[str]:
+    combined = existing + extra
+    # 去重并保持顺序
+    seen = set()
+    deduped = []
+    for rule in combined:
+        if rule not in seen:
+            seen.add(rule)
+            deduped.append(rule)
+    return deduped
+
