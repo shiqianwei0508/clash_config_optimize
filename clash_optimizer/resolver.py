@@ -1,5 +1,6 @@
 import dns.resolver
 
+
 class ProxyResolver:
     def resolve(self, domain: str) -> str | None:
         try:

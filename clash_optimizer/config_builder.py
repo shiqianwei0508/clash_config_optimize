@@ -2,6 +2,7 @@ from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 from ruamel.yaml.comments import CommentedMap
 from clash_optimizer.constants import generate_204_url
 
+
 class ConfigBuilder:
     def __init__(self, proxies: list[dict], groups: dict):
         self.proxies = proxies

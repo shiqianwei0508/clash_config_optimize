@@ -5,7 +5,14 @@ from clash_optimizer.resolver import ProxyResolver
 from clash_optimizer.geoip import GeoIPClassifier
 from clash_optimizer.proxy_manager import ProxyManager
 from clash_optimizer.config_builder import ConfigBuilder
-from clash_optimizer.utils import load_yaml, save_yaml, print_summary, merge_configs, generate_whitelist_rules, merge_rules
+from clash_optimizer.utils import (
+    load_yaml,
+    save_yaml,
+    print_summary,
+    merge_configs,
+    generate_whitelist_rules,
+    merge_rules
+)
 from clash_optimizer.constants import group_keywords, whitelist_domains
 
 

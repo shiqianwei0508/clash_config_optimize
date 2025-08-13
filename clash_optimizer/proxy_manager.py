@@ -1,5 +1,6 @@
 import ipaddress
 
+
 class ProxyManager:
     def __init__(self, resolver, geoip):
         self.resolver = resolver

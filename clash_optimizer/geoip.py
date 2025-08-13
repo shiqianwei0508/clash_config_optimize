@@ -1,6 +1,7 @@
 import geoip2.database
 from geoip2.errors import AddressNotFoundError
 
+
 class GeoIPClassifier:
     def __init__(self, mmdb_path: str):
         self.reader = geoip2.database.Reader(mmdb_path)
