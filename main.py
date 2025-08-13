@@ -13,6 +13,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="🛠️ Clash YAML 多文件合并优化工具")
     parser.add_argument("--clashconfig", nargs="+", required=True, help="多个原始配置路径")
     parser.add_argument("--newconfig", default="config.yaml", help="输出配置路径（默认：config.yaml）")
+    parser.add_argument("--no-trojan", action="store_true", help="移除所有 trojan 类型节点")
     return parser.parse_args()
 
 
@@ -38,6 +39,8 @@ def main():
     manager = ProxyManager(resolver, geoip)
 
     proxies = manager.dedupe(base_config.get("proxies", []))
+    if args.no_trojan:
+        proxies = manager.filter_by_type(proxies, "trojan")
     proxies = manager.rename_by_geoip(proxies)
     base_config["proxies"] = proxies
 

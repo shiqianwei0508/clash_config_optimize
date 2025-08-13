@@ -81,3 +81,9 @@ class ProxyManager:
             if not matched:
                 groups["🧪 其它"].append(name)
         return groups
+
+    def filter_by_type(self, proxies: list[dict], exclude_type: str) -> list[dict]:
+        filtered = [p for p in proxies if p.get("type") != exclude_type]
+        removed = len(proxies) - len(filtered)
+        print(f"🧹 移除 {exclude_type} 节点：{removed} 个")
+        return filtered
