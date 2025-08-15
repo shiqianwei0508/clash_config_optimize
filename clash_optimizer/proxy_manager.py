@@ -51,7 +51,8 @@ class ProxyManager:
                 proxy.get("type"),
                 proxy.get("server"),
                 proxy.get("port"),
-                proxy.get("network")
+                proxy.get("network"),
+                proxy.get("servername", "")
             )
 
             if key not in seen:

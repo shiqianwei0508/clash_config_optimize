@@ -154,3 +154,4 @@ cython_debug/
 /*.yaml
 /duplicates.txt
 /mmdb/
+/source_yaml/
