@@ -110,5 +110,6 @@ generate_204_url = "https://clients3.google.com/generate_204"
 whitelist_domains = [
     "gbim.vip",
     "freedo3d.com",
-    "freedoonline.com"
+    "freedoonline.com",
+    "challenges.cloudflare.com"
 ]
