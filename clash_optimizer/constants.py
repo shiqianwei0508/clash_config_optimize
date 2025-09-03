@@ -111,5 +111,6 @@ whitelist_domains = [
     "gbim.vip",
     "freedo3d.com",
     "freedoonline.com",
-    "challenges.cloudflare.com"
+    "challenges.cloudflare.com",
+    "v2rayse.com"
 ]
