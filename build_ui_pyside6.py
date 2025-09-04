@@ -9,7 +9,7 @@ RESOURCE_PATH = "static/pic/loading.gif"
 MMDB_PATH = "mmdb/GeoLite2-Country.mmdb"
 script_base = os.path.splitext(os.path.basename(MAIN_SCRIPT))[0]
 dist_dir = os.path.join("dist", f"{script_base}.dist")
-final_exe = os.path.join(dist_dir, f"{EXE_NAME}.exe")
+final_exe = os.path.join(dist_dir, f"{script_base}.exe")
 
 
 # # ✅ 清理旧构建
