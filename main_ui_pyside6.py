@@ -172,13 +172,25 @@ class ClashOptimizerUI(QWidget):
 
         self.setLayout(layout)
 
-        # 加载动画
-        self.loading_label = QLabel()
-        self.loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # ✅ 漂浮式加载动画（不参与布局）
+        self.loading_label = QLabel(self)
+        self.loading_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.loading_label.setStyleSheet("background: transparent;")
         self.loading_movie = QMovie("static/pic/loading.gif")
         self.loading_label.setMovie(self.loading_movie)
+        self.loading_label.setFixedSize(120, 120)  # 根据 GIF 尺寸调整
         self.loading_label.hide()
-        layout.addWidget(self.loading_label)
+
+        # ✅ 居中定位函数
+        def center_loading():
+            w, h = self.loading_label.width(), self.loading_label.height()
+            x = (self.width() - w) // 2
+            y = (self.height() - h) // 2
+            self.loading_label.move(x, y)
+
+        # ✅ 在窗口大小变化时自动居中
+        self.resizeEvent = lambda event: center_loading()
+        center_loading()
 
     def select_files(self):
         """
@@ -270,6 +282,7 @@ class ClashOptimizerUI(QWidget):
         for btn in self.buttons:
             btn.setEnabled(False)
         self.loading_label.show()
+        self.loading_label.raise_()  # 提升层级，确保在最上层
         self.loading_movie.start()
         QApplication.processEvents()
 
