@@ -6,7 +6,13 @@ from PySide6.QtWidgets import (
     QApplication, QWidget, QLabel, QPushButton, QListWidget,
     QVBoxLayout, QHBoxLayout, QFileDialog, QLineEdit, QMessageBox, QCheckBox
 )
-from PySide6.QtCore import Qt
+
+# PySide6 核心模块：线程、信号、定时器、动画
+from PySide6.QtCore import (
+    Qt, QThread, QObject, Signal, QTimer
+)
+
+# PySide6 图形模块 (用于加载 GIF)
 from PySide6.QtGui import QMovie
 
 # Clash 优化器核心模块
@@ -23,11 +29,6 @@ from clash_optimizer.utils import (
     merge_rules
 )
 from clash_optimizer.constants import group_keywords, whitelist_domains
-
-# PySide6 线程与定时器支持
-from PySide6.QtCore import QThread
-from PySide6.QtCore import QObject, Signal
-from PySide6.QtCore import QTimer
 
 
 def get_default_output_path():
@@ -106,7 +107,6 @@ class OptimizerWorker(QObject):
             self.error.emit(str(e))
 
 
-
 class ClashOptimizerUI(QWidget):
     """
     主窗口类：Clash YAML 优化工具的图形界面
@@ -174,7 +174,7 @@ class ClashOptimizerUI(QWidget):
 
         # 加载动画
         self.loading_label = QLabel()
-        self.loading_label.setAlignment(Qt.AlignCenter)
+        self.loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.loading_movie = QMovie("static/pic/loading.gif")
         self.loading_label.setMovie(self.loading_movie)
         self.loading_label.hide()
@@ -298,8 +298,6 @@ class ClashOptimizerUI(QWidget):
         self.timeout_timer.start(300_000)  # 300秒
 
 
-
-
 if __name__ == "__main__":
     """
     程序入口：
@@ -311,4 +309,3 @@ if __name__ == "__main__":
     window = ClashOptimizerUI()
     window.show()
     sys.exit(app.exec())
-
