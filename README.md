@@ -75,8 +75,11 @@ python main_ui_pyside6.py
 - 支持Hysteria2、Trojan、Vless、VMess等多种协议
 - 自动生成完整的Clash配置（含代理组、规则）
 - 规则使用无需额外数据库的格式（避免"rule set not found"错误）
+- 双界面支持：提供命令行和 PySide6 GUI 两种使用方式
 
 #### 使用方法
+
+##### 命令行模式
 
 ```bash
 # 从文件生成配置
@@ -85,6 +88,20 @@ python uri2clash/uri2clash.py --input uris.txt --output converted.yaml
 # 从URL生成配置
 python uri2clash/uri2clash.py --url "https://example.com/nodes.txt" --output subscription.yaml
 ```
+
+##### GUI 图形界面模式
+
+```bash
+python uri2clash_gui.py
+```
+
+**GUI 功能特点**：
+- 直观的输入选择（文件/URL）
+- 便捷的文件浏览选择
+- 实时转换日志显示
+- 进度条实时反馈
+- 友好的操作提示
+- 支持转换结果通知
 
 #### 参数说明
 
@@ -198,9 +215,10 @@ rules:
 
 | 文件名 | 说明 |
 |--------|------|
-| `parser.py` | URI 解析模块，支持 hysteria2、ss、vless、vmess、trojan 等协议 |
-| `uri2clash.py` | URI 转 Clash YAML 的主脚本，支持从文件/URL获取节点，自动生成完整配置 |
-| `utils.py` | URI 工具函数，包括加载 URI 文件、从URL下载节点、保存 YAML 等 |
+| `uri2clash/parser.py` | URI 解析模块，支持 hysteria2、ss、vless、vmess、trojan 等协议 |
+| `uri2clash/uri2clash.py` | URI 转 Clash YAML 的主脚本，支持从文件/URL获取节点，自动生成完整配置 |
+| `uri2clash/utils.py` | URI 工具函数，包括加载 URI 文件、从URL下载节点、保存 YAML 等 |
+| `uri2clash_gui.py` | PySide6 GUI 界面，提供可视化操作，支持文件/URL输入，实时日志和进度反馈 |
 
 ### 静态资源
 
@@ -280,7 +298,7 @@ rules:
 ### 3. 辅助工具
 
 #### `uri2clash/uri2clash.py`
-- URI 节点转 Clash YAML 格式的核心脚本
+- URI 节点转 Clash YAML 的核心脚本
 - 支持从本地文件或远程URL获取节点列表
 - 自动处理重复节点名称（同名不同服务器时添加编号后缀）
 - 支持多种协议：hysteria2、trojan、ss、vless、vmess
@@ -289,6 +307,15 @@ rules:
   - 智能代理组（按国家分组、流媒体分组等）
   - 无需额外数据库的规则配置
 - 批量转换功能，支持处理大量节点
+
+#### `uri2clash_gui.py`
+- PySide6 图形界面脚本，提供可视化 URI 转 Clash 配置操作
+- 支持两种输入方式：本地文件和远程 URL
+- 提供文件浏览选择功能，方便用户选择输入和输出文件
+- 实时显示转换日志，包含节点发现、重复处理、配置生成等信息
+- 进度条实时反馈转换进度，让用户了解当前转换状态
+- 转换完成后提供友好的结果通知，支持打开输出文件
+- 现代化的 UI 设计，操作直观便捷
 
 #### `validate_clash_yaml.py`
 - 验证 Clash 配置文件的语法
