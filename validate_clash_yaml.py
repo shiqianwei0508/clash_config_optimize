@@ -11,7 +11,8 @@ PROXY_TYPE_REQUIRED_FIELDS = {
     'vless': ['name', 'type', 'server', 'port', 'uuid'],  # 根据parse_vless函数
     'trojan': ['name', 'type', 'server', 'port', 'password'],  # 根据parse_trojan函数
     'ss': ['name', 'type', 'server', 'port', 'cipher', 'password'],  # 根据parse_ss函数
-    'hysteria2': ['name', 'type', 'server', 'port']  # 移除auth-str作为必填字段，因为某些配置可能不包含
+    'hysteria2': ['name', 'type', 'server', 'port'],  # 移除auth-str作为必填字段，因为某些配置可能不包含
+    'anytls': ['name', 'type', 'server', 'port', 'password']  # 添加anytls代理类型支持
 }
 
 # 不同代理类型的可选字段 - 基于uri2clash/parser.py中的解析逻辑并扩展常见字段
@@ -31,7 +32,8 @@ PROXY_TYPE_OPTIONAL_FIELDS = {
            'version', 'skip-cert-verify', 'grpc-opts'],  # 扩展了常见字段，添加WebSocket相关字段、版本和grpc相关字段
     'hysteria2': ['sni', 'skip-cert-verify', 'alpn', 'obfs', 'obfs-password', 'upmbps', 'downmbps', 
                  'udp', 'network', 'auth-str', 'password', 'tls',
-                 'version', 'grpc-opts']  # 扩展了常见字段，添加password作为可选字段，支持简单tls字段和其他常见字段
+                 'version', 'grpc-opts'],  # 扩展了常见字段，添加password作为可选字段，支持简单tls字段和其他常见字段
+    'anytls': ['network', 'tls', 'servername', 'ws-path', 'ws-headers', 'grpc-opts', 'version', 'skip-cert-verify', 'client-fingerprint', 'udp', 'alpn', 'sni']  # 根据实际配置更新anytls代理类型的可选字段
 }
 
 def validate_proxies(proxies, return_valid_list=False):
@@ -257,10 +259,10 @@ def validate_clash_yaml(file_path, clean=False):
         print("[⚠️ 警告] 未配置代理端口(port)")
     if 'socks-port' not in config:
         print("[⚠️ 警告] 未配置SOCKS5端口(socks-port)")
-    if 'redir-port' not in config:
-        print("[⚠️ 警告] 未配置透明代理端口(redir-port)")
-    if 'tproxy-port' not in config:
-        print("[⚠️ 警告] 未配置TPROXY端口(tproxy-port)")
+    # if 'redir-port' not in config:
+    #     print("[⚠️ 警告] 未配置透明代理端口(redir-port)")
+    # if 'tproxy-port' not in config:
+    #     print("[⚠️ 警告] 未配置TPROXY端口(tproxy-port)")
     if 'allow-lan' not in config:
         print("[⚠️ 警告] 未配置是否允许局域网访问(allow-lan)")
     if 'mode' not in config:
