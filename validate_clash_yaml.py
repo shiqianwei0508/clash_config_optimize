@@ -4,22 +4,22 @@ from ruamel.yaml.constructor import ConstructorError
 
 REQUIRED_FIELDS = ['proxies', 'proxy-groups', 'rules']
 
-# 不同代理类型的必填字段
+# 不同代理类型的必填字段 - 基于uri2clash/parser.py中的解析逻辑
 PROXY_TYPE_REQUIRED_FIELDS = {
-    'vmess': ['name', 'type', 'server', 'port', 'uuid'],
-    'vless': ['name', 'type', 'server', 'port', 'uuid'],
-    'trojan': ['name', 'type', 'server', 'port', 'password'],
-    'ss': ['name', 'type', 'server', 'port', 'cipher', 'password'],
-    'hysteria2': ['name', 'type', 'server', 'port', 'auth-str']
+    'vmess': ['name', 'type', 'server', 'port', 'uuid'],  # 根据parse_vmess函数
+    'vless': ['name', 'type', 'server', 'port', 'uuid'],  # 根据parse_vless函数
+    'trojan': ['name', 'type', 'server', 'port', 'password'],  # 根据parse_trojan函数
+    'ss': ['name', 'type', 'server', 'port', 'cipher', 'password'],  # 根据parse_ss函数
+    'hysteria2': ['name', 'type', 'server', 'port', 'auth-str']  # 根据parse_hysteria2函数
 }
 
-# 不同代理类型的可选字段
+# 不同代理类型的可选字段 - 基于uri2clash/parser.py中的解析逻辑
 PROXY_TYPE_OPTIONAL_FIELDS = {
-    'vmess': ['alterId', 'cipher', 'network', 'tls', 'host', 'path', 'sni', 'udp'],
-    'vless': ['security', 'encryption', 'flow', 'sni', 'fp', 'pbk', 'network', 'header'],
-    'trojan': ['security', 'sni', 'fp', 'skip-cert-verify', 'type-tcp', 'header-type'],
-    'ss': ['plugin', 'plugin-opts'],
-    'hysteria2': ['sni', 'skip-cert-verify', 'alpn', 'auth-str', 'obfs', 'obfs-password', 'upmbps', 'downmbps']
+    'vmess': ['alterId', 'cipher', 'network', 'tls', 'host', 'path', 'sni', 'udp'],  # 根据parse_vmess函数
+    'vless': ['security', 'encryption', 'flow', 'sni', 'fp', 'pbk', 'network', 'header'],  # 根据parse_vless函数
+    'trojan': ['security', 'sni', 'fp', 'skip-cert-verify', 'type-tcp', 'header-type'],  # 根据parse_trojan函数
+    'ss': ['plugin', 'plugin-opts'],  # SS的标准可选字段
+    'hysteria2': ['sni', 'skip-cert-verify', 'alpn', 'obfs', 'obfs-password', 'upmbps', 'downmbps']  # Hysteria2标准字段，移除重复的auth-str
 }
 
 def validate_proxies(proxies):
