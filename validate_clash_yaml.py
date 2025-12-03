@@ -1,4 +1,5 @@
 import sys
+import os
 from ruamel.yaml import YAML
 from ruamel.yaml.constructor import ConstructorError
 
@@ -10,23 +11,34 @@ PROXY_TYPE_REQUIRED_FIELDS = {
     'vless': ['name', 'type', 'server', 'port', 'uuid'],  # 根据parse_vless函数
     'trojan': ['name', 'type', 'server', 'port', 'password'],  # 根据parse_trojan函数
     'ss': ['name', 'type', 'server', 'port', 'cipher', 'password'],  # 根据parse_ss函数
-    'hysteria2': ['name', 'type', 'server', 'port', 'auth-str']  # 根据parse_hysteria2函数
+    'hysteria2': ['name', 'type', 'server', 'port']  # 移除auth-str作为必填字段，因为某些配置可能不包含
 }
 
-# 不同代理类型的可选字段 - 基于uri2clash/parser.py中的解析逻辑
+# 不同代理类型的可选字段 - 基于uri2clash/parser.py中的解析逻辑并扩展常见字段
 PROXY_TYPE_OPTIONAL_FIELDS = {
-    'vmess': ['alterId', 'cipher', 'network', 'tls', 'host', 'path', 'sni', 'udp'],  # 根据parse_vmess函数
-    'vless': ['security', 'encryption', 'flow', 'sni', 'fp', 'pbk', 'network', 'header'],  # 根据parse_vless函数
-    'trojan': ['security', 'sni', 'fp', 'skip-cert-verify', 'type-tcp', 'header-type'],  # 根据parse_trojan函数
-    'ss': ['plugin', 'plugin-opts'],  # SS的标准可选字段
-    'hysteria2': ['sni', 'skip-cert-verify', 'alpn', 'obfs', 'obfs-password', 'upmbps', 'downmbps']  # Hysteria2标准字段，移除重复的auth-str
+    'vmess': ['alterId', 'cipher', 'network', 'tls', 'host', 'path', 'sni', 'udp', 
+              'servername', 'ws-opts', 'client-fingerprint', 'alpn', 'ws-path', 'ws-headers',
+              'version', 'skip-cert-verify'],  # 扩展了常见字段，添加更多WebSocket相关字段和版本相关字段
+    'vless': ['security', 'encryption', 'flow', 'sni', 'fp', 'pbk', 'network', 'header', 
+              'servername', 'ws-opts', 'client-fingerprint', 'alpn', 'udp', 
+              'reality-opts', 'skip-cert-verify', 'reality', 'ws-path', 'ws-headers',
+              'version', 'grpc-opts'],  # 扩展了常见字段，添加reality、WebSocket相关字段、版本和grpc相关字段
+    'trojan': ['security', 'sni', 'fp', 'skip-cert-verify', 'type-tcp', 'header-type', 
+               'servername', 'client-fingerprint', 'alpn', 'udp', 'reality-opts', 'reality', 
+               'network', 'tls', 'ws-opts', 'ws-path', 'ws-headers',
+               'version', 'grpc-opts'],  # 扩展了常见字段，添加network、tls、WebSocket相关字段、版本和grpc相关字段
+    'ss': ['plugin', 'plugin-opts', 'udp', 'network', 'tls', 'servername', 'ws-opts', 'ws-path', 'ws-headers',
+           'version', 'skip-cert-verify', 'grpc-opts'],  # 扩展了常见字段，添加WebSocket相关字段、版本和grpc相关字段
+    'hysteria2': ['sni', 'skip-cert-verify', 'alpn', 'obfs', 'obfs-password', 'upmbps', 'downmbps', 
+                 'udp', 'network', 'auth-str', 'password', 'tls',
+                 'version', 'grpc-opts']  # 扩展了常见字段，添加password作为可选字段，支持简单tls字段和其他常见字段
 }
 
-def validate_proxies(proxies):
+def validate_proxies(proxies, return_valid_list=False):
     """验证代理节点列表"""
     if not isinstance(proxies, list):
         print("[❌ 配置错误] proxies 必须是列表类型。")
-        return False
+        return False if not return_valid_list else ([], 0, 0, 0)
     
     if not proxies:
         print("[⚠️ 警告] proxies 列表为空。")
@@ -34,6 +46,7 @@ def validate_proxies(proxies):
     valid_count = 0
     invalid_count = 0
     unknown_type_count = 0
+    valid_proxies = []
     
     for idx, proxy in enumerate(proxies):
         if not isinstance(proxy, dict):
@@ -80,20 +93,26 @@ def validate_proxies(proxies):
             invalid_count += 1
             continue
         
-        # 检查未知字段（仅警告）
-        all_valid_fields = PROXY_TYPE_REQUIRED_FIELDS[proxy_type] + PROXY_TYPE_OPTIONAL_FIELDS[proxy_type]
-        unknown_fields = [field for field in proxy if field not in all_valid_fields]
-        if unknown_fields:
-            print(f"[⚠️ 未知字段] {proxy_name}: {', '.join(unknown_fields)}")
+        # 检查未知字段（仅警告）- 暂时禁用，避免过多警告信息
+        # all_valid_fields = PROXY_TYPE_REQUIRED_FIELDS[proxy_type] + PROXY_TYPE_OPTIONAL_FIELDS[proxy_type]
+        # unknown_fields = [field for field in proxy if field not in all_valid_fields]
+        # if unknown_fields:
+        #     print(f"[⚠️ 未知字段] {proxy_name}: {', '.join(unknown_fields)}")
         
         valid_count += 1
+        valid_proxies.append(proxy)
     
     print(f"\n[📊 代理节点统计]")
     print(f"  有效节点数: {valid_count}")
     print(f"  无效节点数: {invalid_count}")
     print(f"  未知类型节点数: {unknown_type_count}")
     
-    return invalid_count == 0
+    if return_valid_list:
+        return (valid_proxies, valid_count, invalid_count, unknown_type_count)
+    
+    # 即使有无效节点，也返回True，让用户可以继续使用大部分有效的代理节点
+    # 只在完全没有有效节点时才返回False
+    return valid_count > 0
 
 def validate_proxy_groups(proxy_groups):
     """验证代理组配置"""
@@ -163,7 +182,7 @@ def validate_rules(rules):
     print(f"[✅ 规则验证成功] 共有 {len(rules)} 条规则")
     return True
 
-def validate_clash_yaml(file_path):
+def validate_clash_yaml(file_path, clean=False):
     """验证Clash YAML配置文件"""
     print(f"[🔍 开始验证配置文件: {file_path}]")
     
@@ -191,9 +210,38 @@ def validate_clash_yaml(file_path):
     # 详细验证各个部分
     print("\n[📋 开始详细验证]")
     
-    # 验证proxies
+    # 验证proxies，根据是否需要清理决定是否返回有效节点列表
     print("\n[🔧 验证代理节点]")
-    proxies_valid = validate_proxies(config.get('proxies', []))
+    if clean:
+        valid_proxies, valid_count, invalid_count, unknown_type_count = validate_proxies(config.get('proxies', []), return_valid_list=True)
+        proxies_valid = valid_count > 0
+        
+        # 如果有无效节点且用户要求清理，则更新配置文件
+        if invalid_count > 0:
+            print("\n[🧹 开始清理无效节点]")
+            original_count = len(config.get('proxies', []))
+            config['proxies'] = valid_proxies
+            
+            # 生成新文件名
+            base_name, ext = os.path.splitext(file_path)
+            new_file_path = f"{base_name}_cleaned{ext}"
+            
+            # 保存清理后的配置
+            try:
+                yaml_dumper = YAML()
+                yaml_dumper.indent(mapping=2, sequence=4, offset=2)
+                with open(new_file_path, 'w', encoding='utf-8') as f:
+                    yaml_dumper.dump(config, f)
+                print(f"✅ 清理完成！已生成新文件: {new_file_path}")
+                print(f"📊 清理统计：")
+                print(f"  原节点总数: {original_count}")
+                print(f"  清理后有效节点数: {len(valid_proxies)}")
+                print(f"  移除的无效节点数: {invalid_count + unknown_type_count}")
+            except Exception as e:
+                print(f"❌ 保存清理后的文件失败: {e}")
+                return False
+    else:
+        proxies_valid = validate_proxies(config.get('proxies', []))
     
     # 验证proxy-groups
     print("\n[🔧 验证代理组]")
@@ -227,11 +275,15 @@ def validate_clash_yaml(file_path):
         return False
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("用法：python validate_clash_yaml.py xxx.yaml")
+    if len(sys.argv) < 2 or len(sys.argv) > 3:
+        print("用法：python validate_clash_yaml.py xxx.yaml [--clean]")
+        print("选项：")
+        print("  --clean   清理无效节点并生成新文件(文件名会添加_cleaned后缀)")
         sys.exit(1)
 
     yaml_path = sys.argv[1]
-    valid = validate_clash_yaml(yaml_path)
+    clean = len(sys.argv) == 3 and sys.argv[2] == "--clean"
+    
+    valid = validate_clash_yaml(yaml_path, clean=clean)
     if not valid:
         sys.exit(1)
