@@ -149,6 +149,15 @@ python uri2clash_gui.py
 python validate_clash_yaml.py config.yaml
 ```
 
+**功能特点**：
+- ✅ 验证Clash配置文件的语法
+- ✅ 检查关键字段是否齐全（proxies, proxy-groups, rules）
+- ✅ 支持针对不同代理类型（vmess、vless、trojan、ss、hysteria2）的结构化验证
+- ✅ 验证代理节点的必填字段和可选字段
+- ✅ 检查服务器和端口格式的有效性
+- ✅ 提供详细的错误信息和统计报告
+- ✅ 支持未知代理类型的智能处理
+
 ### 5. 文本清洗工具
 
 ```bash
@@ -320,7 +329,14 @@ rules:
 #### `validate_clash_yaml.py`
 - 验证 Clash 配置文件的语法
 - 检查关键字段是否齐全（proxies, proxy-groups, rules）
-- 提供详细的错误信息
+- 支持针对不同代理类型（vmess、vless、trojan、ss、hysteria2）的结构化验证
+- 根据代理类型验证必填字段和可选字段
+- 检查服务器地址格式和端口范围（1-65535）
+- 提供详细的错误信息和统计报告
+- 识别并处理未知代理类型
+- 验证代理组和规则的格式正确性
+- 对未知字段提供警告信息而非直接报错
+- 输出详细的代理节点统计信息（有效/无效/未知类型）
 
 #### `txt_cleaner.py`
 - 中文文本清洗工具
