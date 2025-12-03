@@ -9,6 +9,8 @@ def parse_hysteria2(uri: str) -> dict:
     query, fragment = query_fragment.split("#", 1)
 
     server, port = hostport.split(":")
+    # 移除端口号中可能存在的斜杠字符
+    port = port.rstrip('/')
     params = urllib.parse.parse_qs(query)
     name = urllib.parse.unquote(fragment)
 
@@ -27,6 +29,8 @@ def parse_ss(uri: str) -> dict:
     base, rest = body.split("@", 1)
     serverport, fragment = rest.split("#", 1)
     server, port = serverport.split(":")
+    # 移除端口号中可能存在的斜杠字符
+    port = port.rstrip('/')
 
     name = urllib.parse.unquote(fragment)
     return {
@@ -45,6 +49,8 @@ def parse_vless(uri: str) -> dict:
     query, fragment = query_fragment.split("#", 1)
 
     server, port = hostport.split(":")
+    # 移除端口号中可能存在的斜杠字符
+    port = port.rstrip('/')
     params = urllib.parse.parse_qs(query)
     name = urllib.parse.unquote(fragment)
 
@@ -95,6 +101,8 @@ def parse_trojan(uri: str) -> dict:
     query, fragment = query_fragment.split("#", 1)
 
     server, port = hostport.split(":")
+    # 移除端口号中可能存在的斜杠字符
+    port = port.rstrip('/')
     params = urllib.parse.parse_qs(query)
     name = urllib.parse.unquote(fragment)
 

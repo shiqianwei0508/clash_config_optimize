@@ -11,130 +11,14 @@ from PySide6.QtWidgets import (
     QButtonGroup, QGroupBox, QProgressBar, QMessageBox
 )
 from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QClipboard, QTextCursor
 
 # 添加项目根目录到路径，确保能导入模块
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from uri2clash.parser import parse_uri
 from uri2clash.utils import load_uri_file, load_uri_from_url, save_yaml
-
-def generate_clash_config(proxies):
-    """生成完整的Clash配置"""
-    # 按国家分组节点
-    country_proxies = {
-        '🇺🇸': [],  # 美国
-        '🇭🇰': [],  # 香港
-        '🇯🇵': [],  # 日本
-        'other': []  # 其他国家
-    }
-    
-    # 识别节点国家
-    for proxy in proxies:
-        name = proxy['name']
-        # 检查名称中是否包含国家标识
-        if '🇺🇸' in name or 'US' in name:
-            country_proxies['🇺🇸'].append(name)
-        elif '🇭🇰' in name or 'HK' in name:
-            country_proxies['🇭🇰'].append(name)
-        elif '🇯🇵' in name or 'JP' in name:
-            country_proxies['🇯🇵'].append(name)
-        else:
-            country_proxies['other'].append(name)
-    
-    # 构建完整配置
-    config = {
-        # 基础配置
-        'mixed-port': 7890,
-        'allow-lan': False,
-        'bind-address': '127.0.0.1',
-        'socks-port': 7891,
-        'redir-port': 7892,
-        'mode': 'Rule',
-        'log-level': 'info',
-        'unified-delay': True,
-        'tun': {
-            'enable': False
-        },
-        
-        # 代理节点
-        'proxies': proxies,
-        
-        # 代理组配置
-        'proxy-groups': [
-            {
-                'name': '🚀 节点选择',
-                'type': 'select',
-                'proxies': ['DIRECT', '🇺🇸 美国节点', '🇭🇰 香港节点', '🇯🇵 日本节点', '🌐 其他节点']
-            },
-            {
-                'name': '🇺🇸 美国节点',
-                'type': 'select',
-                'proxies': ['DIRECT'] + country_proxies['🇺🇸']
-            },
-            {
-                'name': '🇭🇰 香港节点',
-                'type': 'select',
-                'proxies': ['DIRECT'] + country_proxies['🇭🇰']
-            },
-            {
-                'name': '🇯🇵 日本节点',
-                'type': 'select',
-                'proxies': ['DIRECT'] + country_proxies['🇯🇵']
-            },
-            {
-                'name': '🌐 其他节点',
-                'type': 'select',
-                'proxies': ['DIRECT'] + country_proxies['other']
-            },
-            {
-                'name': '📺 流媒体',
-                'type': 'select',
-                'proxies': ['DIRECT', '🇺🇸 美国节点']
-            },
-            {
-                'name': '🌍 全球直连',
-                'type': 'select',
-                'proxies': ['DIRECT', '🚀 节点选择']
-            },
-            {
-                'name': '🛡️ 隐私保护',
-                'type': 'select',
-                'proxies': ['DIRECT', '🚀 节点选择']
-            }
-        ],
-        
-        # 规则配置
-        'rules': [
-            # Telegram相关规则
-            'DOMAIN-SUFFIX,telegram.org,🚀 节点选择',
-            'DOMAIN-SUFFIX,t.me,🚀 节点选择',
-            'DOMAIN-SUFFIX,telegram.me,🚀 节点选择',
-            'DOMAIN-SUFFIX,tdesktop.com,🚀 节点选择',
-            # 流媒体相关规则
-            'DOMAIN-SUFFIX,youtube.com,📺 流媒体',
-            'DOMAIN-SUFFIX,netflix.com,📺 流媒体',
-            'DOMAIN-SUFFIX,disneyplus.com,📺 流媒体',
-            'DOMAIN-SUFFIX,hbo.com,📺 流媒体',
-            'DOMAIN-SUFFIX,spotify.com,📺 流媒体',
-            # 国内应用规则
-            'DOMAIN-SUFFIX,bilibili.com,DIRECT',
-            'DOMAIN-SUFFIX,netease.com,DIRECT',
-            'DOMAIN-SUFFIX,163.com,DIRECT',
-            'DOMAIN-SUFFIX,qq.com,DIRECT',
-            'DOMAIN-SUFFIX,weixin.qq.com,DIRECT',
-            'DOMAIN-SUFFIX,weibo.com,DIRECT',
-            'DOMAIN-SUFFIX,baidu.com,DIRECT',
-            # 国内IP规则
-            'GEOIP,CN,DIRECT',
-            # 其他规则
-            'DOMAIN-KEYWORD,tiktok,🚀 节点选择',
-            # 默认规则
-            'MATCH,🚀 节点选择'
-        ]
-    }
-    
-    return config
+from uri2clash.uri2clash import generate_clash_config
 
 class ConversionThread(QThread):
     """转换线程，用于在后台执行转换任务"""
@@ -157,9 +41,12 @@ class ConversionThread(QThread):
             if self.input_type == "file":
                 self.log_signal.emit(f"📥 从文件加载节点: {self.input_source}")
                 uris = load_uri_file(self.input_source)
-            else:
+            elif self.input_type == "url":
                 self.log_signal.emit(f"📥 从URL加载节点: {self.input_source}")
                 uris = load_uri_from_url(self.input_source)
+            else:  # 从剪贴板加载
+                self.log_signal.emit("📋 从剪贴板加载节点...")
+                uris = [line.strip() for line in self.input_source.split('\n') if line.strip()]
             
             self.log_signal.emit(f"🔍 发现 {len(uris)} 个节点")
             
@@ -255,17 +142,20 @@ class Uri2ClashUI(QMainWindow):
         input_group = QGroupBox("📥 输入设置")
         input_layout = QVBoxLayout()
         
-        # 输入类型选择（文件/URL）
+        # 输入类型选择（文件/URL/剪贴板）
         type_layout = QHBoxLayout()
         self.file_radio = QRadioButton("📁 从文件加载")
         self.url_radio = QRadioButton("🌐 从URL加载")
+        self.clipboard_radio = QRadioButton("📋 从剪贴板加载")
         self.type_group = QButtonGroup()
         self.type_group.addButton(self.file_radio)
         self.type_group.addButton(self.url_radio)
+        self.type_group.addButton(self.clipboard_radio)
         self.file_radio.setChecked(True)  # 默认选择文件
         
         type_layout.addWidget(self.file_radio)
         type_layout.addWidget(self.url_radio)
+        type_layout.addWidget(self.clipboard_radio)
         type_layout.addStretch()
         
         # 文件输入区域
@@ -350,15 +240,17 @@ class Uri2ClashUI(QMainWindow):
         # 添加欢迎信息
         self.log_text.append("🎉 欢迎使用 URI 节点转 Clash YAML 工具")
         self.log_text.append("📝 支持的协议: VMess, VLESS, Trojan, Shadowsocks, Hysteria2")
-        self.log_text.append("💡 选择输入方式，设置输出路径，点击'开始转换'按钮")
+        self.log_text.append("💡 选择输入方式（文件/URL/剪贴板），设置输出路径，点击'开始转换'按钮")
         self.log_text.append("=" * 80)
     
     def toggle_input_mode(self):
-        """切换输入模式（文件/URL）"""
+        """切换输入模式（文件/URL/剪贴板）"""
         is_file_mode = self.file_radio.isChecked()
+        is_url_mode = self.url_radio.isChecked()
+        
         self.file_path_edit.setEnabled(is_file_mode)
         self.browse_btn.setEnabled(is_file_mode)
-        self.url_edit.setEnabled(not is_file_mode)
+        self.url_edit.setEnabled(is_url_mode)
     
     def browse_file(self):
         """浏览选择文件"""
@@ -388,7 +280,7 @@ class Uri2ClashUI(QMainWindow):
                 QMessageBox.warning(self, "警告", "输入文件不存在！")
                 return
             input_type = "file"
-        else:
+        elif self.url_radio.isChecked():
             input_source = self.url_edit.text().strip()
             if not input_source:
                 QMessageBox.warning(self, "警告", "请输入URL地址！")
@@ -397,6 +289,14 @@ class Uri2ClashUI(QMainWindow):
                 QMessageBox.warning(self, "警告", "请输入有效的URL地址（以http://或https://开头）！")
                 return
             input_type = "url"
+        else:  # 从剪贴板加载
+            clipboard = QApplication.clipboard()
+            clipboard_text = clipboard.text()
+            if not clipboard_text.strip():
+                QMessageBox.warning(self, "警告", "剪贴板为空！")
+                return
+            input_source = clipboard_text
+            input_type = "clipboard"
         
         # 验证输出路径
         output_path = self.output_path_edit.text().strip()
@@ -421,7 +321,7 @@ class Uri2ClashUI(QMainWindow):
         """添加日志信息"""
         self.log_text.append(message)
         # 自动滚动到底部
-        self.log_text.moveCursor(self.log_text.textCursor().End)
+        self.log_text.moveCursor(QTextCursor.End)
     
     def update_progress(self, value):
         """更新进度条"""

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 import yaml
-from parser import parse_uri
-from utils import load_uri_file, load_uri_from_url, save_yaml
+from .parser import parse_uri
+from .utils import load_uri_file, load_uri_from_url, save_yaml
 
 def generate_clash_config(proxies):
     """生成完整的Clash配置"""
