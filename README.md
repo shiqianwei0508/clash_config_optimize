@@ -92,7 +92,7 @@ python uri2clash/uri2clash.py --url "https://example.com/nodes.txt" --output sub
 ##### GUI 图形界面模式
 
 ```bash
-python uri2clash_gui.py
+python uri2clash/uri2clash_gui.py
 ```
 
 **GUI 功能特点**：
@@ -146,7 +146,7 @@ python uri2clash_gui.py
 ### 4. 配置文件验证
 
 ```bash
-python validate_clash_yaml.py config.yaml
+python validate/validate_clash_yaml.py config.yaml
 ```
 
 **功能特点**：
@@ -207,7 +207,6 @@ rules:
 | `clash_config_tool.py` | 旧版的 Clash 配置合并工具 |
 | `detect_duplicate_proxies.py` | 检测配置文件中重复的代理节点 |
 | `txt_cleaner.py` | 中文 TXT 文本清洗工具，替换标点、删除乱码等 |
-| `validate_clash_yaml.py` | 验证 Clash YAML 配置文件的语法和关键字段 |
 
 ### clash_optimizer 模块
 
@@ -227,7 +226,14 @@ rules:
 | `uri2clash/parser.py` | URI 解析模块，支持 hysteria2、ss、vless、vmess、trojan 等协议 |
 | `uri2clash/uri2clash.py` | URI 转 Clash YAML 的主脚本，支持从文件/URL获取节点，自动生成完整配置 |
 | `uri2clash/utils.py` | URI 工具函数，包括加载 URI 文件、从URL下载节点、保存 YAML 等 |
-| `uri2clash_gui.py` | PySide6 GUI 界面，提供可视化操作，支持文件/URL输入，实时日志和进度反馈 |
+| `uri2clash/uri2clash_gui.py` | PySide6 GUI 界面，提供可视化操作，支持文件/URL输入，实时日志和进度反馈 |
+
+### validate 模块
+
+| 文件名 | 说明 |
+|--------|------|
+| `validate/validate_clash_yaml.py` | 验证 Clash YAML 配置文件的语法和关键字段 |
+| `validate/validate_clash_yaml_gui.py` | 配置文件验证的图形界面版本 |
 
 ### 静态资源
 
@@ -317,7 +323,7 @@ rules:
   - 无需额外数据库的规则配置
 - 批量转换功能，支持处理大量节点
 
-#### `uri2clash_gui.py`
+#### `uri2clash/uri2clash_gui.py`
 - PySide6 图形界面脚本，提供可视化 URI 转 Clash 配置操作
 - 支持两种输入方式：本地文件和远程 URL
 - 提供文件浏览选择功能，方便用户选择输入和输出文件
@@ -326,7 +332,7 @@ rules:
 - 转换完成后提供友好的结果通知，支持打开输出文件
 - 现代化的 UI 设计，操作直观便捷
 
-#### `validate_clash_yaml.py`
+#### `validate/validate_clash_yaml.py`
 - 验证 Clash 配置文件的语法
 - 检查关键字段是否齐全（proxies, proxy-groups, rules）
 - 支持针对不同代理类型（vmess、vless、trojan、ss、hysteria2）的结构化验证
@@ -337,6 +343,11 @@ rules:
 - 验证代理组和规则的格式正确性
 - 对未知字段提供警告信息而非直接报错
 - 输出详细的代理节点统计信息（有效/无效/未知类型）
+
+#### `validate/validate_clash_yaml_gui.py`
+- 配置文件验证的图形界面版本
+- 提供文件选择和验证结果可视化展示
+- 支持错误和警告信息的详细显示
 
 #### `txt_cleaner.py`
 - 中文文本清洗工具
