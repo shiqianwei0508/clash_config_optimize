@@ -13,12 +13,26 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QFont, QClipboard, QTextCursor
 
-# 添加项目根目录到路径，确保能导入模块
+# 添加项目根目录和当前目录到路径，确保能导入模块
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from uri2clash.parser import parse_uri
-from uri2clash.utils import load_uri_file, load_uri_from_url, save_yaml
-from uri2clash.uri2clash import generate_clash_config
+try:
+    # 尝试从包导入（从项目根目录运行时）
+    from uri2clash.parser import parse_uri
+    from uri2clash.utils import load_uri_file, load_uri_from_url, save_yaml
+    from uri2clash.uri2clash import generate_clash_config
+except ImportError:
+    # 尝试相对导入（作为包运行时）
+    try:
+        from .parser import parse_uri
+        from .utils import load_uri_file, load_uri_from_url, save_yaml
+        from .uri2clash import generate_clash_config
+    except ImportError:
+        # 直接导入（在uri2clash目录内直接运行时）
+        from parser import parse_uri
+        from utils import load_uri_file, load_uri_from_url, save_yaml
+        from uri2clash import generate_clash_config
 
 class ConversionThread(QThread):
     """转换线程，用于在后台执行转换任务"""

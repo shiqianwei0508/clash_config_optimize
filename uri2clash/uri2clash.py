@@ -1,8 +1,20 @@
 #!/usr/bin/env python3
 import argparse
 import yaml
-from .parser import parse_uri
-from .utils import load_uri_file, load_uri_from_url, save_yaml
+import sys
+import os
+
+# 添加当前目录到Python路径，确保能直接运行时正确导入
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    # 尝试相对导入（作为包运行时）
+    from .parser import parse_uri
+    from .utils import load_uri_file, load_uri_from_url, save_yaml
+except ImportError:
+    # 直接导入（直接运行时）
+    from parser import parse_uri
+    from utils import load_uri_file, load_uri_from_url, save_yaml
 
 def generate_clash_config(proxies):
     """生成完整的Clash配置"""
