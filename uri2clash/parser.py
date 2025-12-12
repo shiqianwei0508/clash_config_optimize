@@ -148,11 +148,74 @@ def parse_trojan(uri: str) -> dict:
         "header-type": params.get("headerType", ["none"])[0]
     }
 
+def parse_ssr(uri: str) -> dict:
+    """解析ShadowsocksR (ssr://) URI"""
+    body = uri[len("ssr://"):]
+    
+    # 解码base64编码的主体部分
+    try:
+        # 使用urlsafe_b64decode自动处理URL安全编码和填充
+        decoded_body = base64.urlsafe_b64decode(body + '=' * (-len(body) % 4)).decode("utf-8")
+    except Exception as e:
+        raise ValueError(f"ssr base64 解码失败: {e}")
+    
+    # 分割URI主体部分
+    # 格式：服务器:端口:协议:加密:混淆:密码?参数#备注
+    main_part = decoded_body
+    query_part = ""
+    name = "ssr"
+    
+    # 处理查询参数和名称
+    if "?" in main_part:
+        main_part, query_part = main_part.split("?", 1)
+        if "#" in query_part:
+            query_part, name_part = query_part.split("#", 1)
+            name = urllib.parse.unquote(name_part)
+    elif "#" in main_part:
+        main_part, name_part = main_part.split("#", 1)
+        name = urllib.parse.unquote(name_part)
+    
+    # 分割主要部分
+    try:
+        server, port, protocol, cipher, obfs, password_part = main_part.split(":", 5)
+        
+        # 处理密码部分，移除可能的路径分隔符
+        if "/" in password_part:
+            password_part = password_part.split("/", 1)[0]
+    except ValueError:
+        raise ValueError(f"ssr URI 格式错误: {decoded_body}")
+    
+    # 解码密码
+    try:
+        password = base64.urlsafe_b64decode(password_part + '=' * (-len(password_part) % 4)).decode("utf-8")
+    except Exception as e:
+        raise ValueError(f"ssr 密码 base64 解码失败: {e}")
+    
+    # 解析查询参数
+    params = urllib.parse.parse_qs(query_part)
+    
+    return {
+        "name": name,
+        "type": "ssr",
+        "server": server,
+        "port": int(port),
+        "protocol": protocol,
+        "cipher": cipher,
+        "obfs": obfs,
+        "password": password,
+        "obfs-param": params.get("obfsparam", [""])[0],
+        "protocol-param": params.get("protoparam", [""])[0],
+        "group": params.get("group", [""])[0],
+        "udp": True
+    }
+
 def parse_uri(uri: str) -> dict:
     if uri.startswith("hysteria2://"):
         return parse_hysteria2(uri)
     elif uri.startswith("ss://"):
         return parse_ss(uri)
+    elif uri.startswith("ssr://"):
+        return parse_ssr(uri)
     elif uri.startswith("vless://"):
         return parse_vless(uri)
     elif uri.startswith("vmess://"):

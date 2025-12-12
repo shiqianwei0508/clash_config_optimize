@@ -157,3 +157,4 @@ cython_debug/
 /source_yaml/
 uri2clash/url_sample.txt
 uri2clash/clash_config_sample.yaml
+uri2clash/clash_config_ssr.yaml

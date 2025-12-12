@@ -12,7 +12,8 @@ PROXY_TYPE_REQUIRED_FIELDS = {
     'trojan': ['name', 'type', 'server', 'port', 'password'],  # 根据parse_trojan函数
     'ss': ['name', 'type', 'server', 'port', 'cipher', 'password'],  # 根据parse_ss函数
     'hysteria2': ['name', 'type', 'server', 'port'],  # 移除auth-str作为必填字段，因为某些配置可能不包含
-    'anytls': ['name', 'type', 'server', 'port', 'password']  # 添加anytls代理类型支持
+    'anytls': ['name', 'type', 'server', 'port', 'password'],  # 添加anytls代理类型支持
+    'ssr': ['name', 'type', 'server', 'port', 'protocol', 'cipher', 'obfs', 'password']  # 根据parse_ssr函数
 }
 
 # 不同代理类型的可选字段 - 基于uri2clash/parser.py中的解析逻辑并扩展常见字段
@@ -33,7 +34,8 @@ PROXY_TYPE_OPTIONAL_FIELDS = {
     'hysteria2': ['sni', 'skip-cert-verify', 'alpn', 'obfs', 'obfs-password', 'upmbps', 'downmbps', 
                  'udp', 'network', 'auth-str', 'password', 'tls',
                  'version', 'grpc-opts'],  # 扩展了常见字段，添加password作为可选字段，支持简单tls字段和其他常见字段
-    'anytls': ['network', 'tls', 'servername', 'ws-path', 'ws-headers', 'grpc-opts', 'version', 'skip-cert-verify', 'client-fingerprint', 'udp', 'alpn', 'sni']  # 根据实际配置更新anytls代理类型的可选字段
+    'anytls': ['network', 'tls', 'servername', 'ws-path', 'ws-headers', 'grpc-opts', 'version', 'skip-cert-verify', 'client-fingerprint', 'udp', 'alpn', 'sni'],  # 根据实际配置更新anytls代理类型的可选字段
+    'ssr': ['obfs-param', 'protocol-param', 'group', 'udp', 'network', 'tls', 'sni', 'alpn', 'skip-cert-verify', 'version']  # 根据parse_ssr函数添加ssr的可选字段
 }
 
 def validate_proxies(proxies, return_valid_list=False):
