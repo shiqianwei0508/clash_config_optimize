@@ -181,7 +181,7 @@ def generate_clash_config(proxies):
     
     return config
 
-def check_proxy_port(server, port, proxy_type=None, network=None, timeout=1):
+def check_proxy_port(server, port, proxy_type=None, network=None, timeout=3):
     """检测代理服务器端口是否可达
     
     Args:
@@ -273,6 +273,7 @@ def main():
     group.add_argument("--input", help="包含 URI 节点的文本文件")
     group.add_argument("--url", help="包含 URI 节点的 URL 地址")
     parser.add_argument("--output", default="converted.yaml", help="输出 YAML 文件路径")
+    parser.add_argument("--skip-port-check", action="store_true", help="跳过端口可达性检测，保留所有解析成功的节点")
     args = parser.parse_args()
 
     # 加载URI列表
@@ -324,7 +325,10 @@ def main():
             print(f"❌ 跳过无效 URI: {uri}\n   原因: {e}")
 
     # 批量检测端口可达性
-    proxies = batch_check_proxies(proxies)
+    if args.skip_port_check:
+        print(f"⏭️  跳过端口检测，保留所有 {len(proxies)} 个解析成功的节点")
+    else:
+        proxies = batch_check_proxies(proxies)
 
     # 生成完整的Clash配置
     config = generate_clash_config(proxies)
