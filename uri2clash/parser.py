@@ -32,14 +32,28 @@ def parse_ss(uri: str) -> dict:
     # 移除端口号中可能存在的斜杠字符
     port = port.rstrip('/')
 
+    # 解码 base64 编码的认证信息
+    try:
+        decoded_auth = base64.b64decode(base + '=' * (-len(base) % 4)).decode("utf-8")
+        if ':' in decoded_auth:
+            cipher, password = decoded_auth.split(':', 1)
+        else:
+            # 处理旧格式
+            cipher = "aes-128-gcm"
+            password = decoded_auth
+    except Exception:
+        # 如果解码失败，使用默认值
+        cipher = "aes-128-gcm"
+        password = base
+
     name = urllib.parse.unquote(fragment)
     return {
         "name": name,
         "type": "ss",
         "server": server,
         "port": int(port),
-        "cipher": "aes-128-gcm",
-        "password": "REDACTED"
+        "cipher": cipher,
+        "password": password
     }
 
 def parse_vless(uri: str) -> dict:
@@ -97,14 +111,28 @@ def parse_vmess(uri: str) -> dict:
 def parse_trojan(uri: str) -> dict:
     body = uri[len("trojan://"):]
     userinfo, rest = body.split("@", 1)
-    hostport, query_fragment = rest.split("?", 1)
-    query, fragment = query_fragment.split("#", 1)
+    
+    # 处理没有查询参数的情况
+    if "?" in rest:
+        hostport, query_fragment = rest.split("?", 1)
+        if "#" in query_fragment:
+            query, fragment = query_fragment.split("#", 1)
+        else:
+            query = query_fragment
+            fragment = ""
+    elif "#" in rest:
+        hostport, fragment = rest.split("#", 1)
+        query = ""
+    else:
+        hostport = rest
+        query = ""
+        fragment = ""
 
     server, port = hostport.split(":")
     # 移除端口号中可能存在的斜杠字符
     port = port.rstrip('/')
     params = urllib.parse.parse_qs(query)
-    name = urllib.parse.unquote(fragment)
+    name = urllib.parse.unquote(fragment) if fragment else f"{server}:{port}"
 
     return {
         "name": name,
@@ -116,7 +144,7 @@ def parse_trojan(uri: str) -> dict:
         "sni": params.get("sni", [""])[0],
         "fp": params.get("fp", [""])[0],
         "skip-cert-verify": params.get("allowInsecure", ["0"])[0] == "1",
-        "type-tcp": params.get("type", ["tcp"])[0],
+        "network": params.get("type", ["tcp"])[0],
         "header-type": params.get("headerType", ["none"])[0]
     }
 

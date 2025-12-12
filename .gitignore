@@ -155,3 +155,5 @@ cython_debug/
 /duplicates.txt
 /mmdb/
 /source_yaml/
+uri2clash/url_sample.txt
+uri2clash/clash_config_sample.yaml

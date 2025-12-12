@@ -3,6 +3,9 @@ import argparse
 import yaml
 import sys
 import os
+import socket
+import concurrent.futures
+from tqdm import tqdm
 
 # 添加当前目录到Python路径，确保能直接运行时正确导入
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -58,51 +61,97 @@ def generate_clash_config(proxies):
         'proxies': proxies,
         
         # 代理组配置
-        'proxy-groups': [
-            {
-                'name': '🚀 节点选择',
-                'type': 'select',
-                'proxies': ['DIRECT', '🇺🇸 美国节点', '🇭🇰 香港节点', '🇯🇵 日本节点', '🌐 其他节点']
-            },
-            {
-                'name': '🇺🇸 美国节点',
-                'type': 'select',
-                'proxies': ['DIRECT'] + country_proxies['🇺🇸']
-            },
-            {
-                'name': '🇭🇰 香港节点',
-                'type': 'select',
-                'proxies': ['DIRECT'] + country_proxies['🇭🇰']
-            },
-            {
-                'name': '🇯🇵 日本节点',
-                'type': 'select',
-                'proxies': ['DIRECT'] + country_proxies['🇯🇵']
-            },
-            {
-                'name': '🌐 其他节点',
-                'type': 'select',
-                'proxies': ['DIRECT'] + country_proxies['other']
-            },
+        'proxy-groups': []
+    }
+    
+    # 创建基础节点选择组
+    node_selection_group = {
+        'name': '🚀 节点选择',
+        'type': 'url-test',
+        'proxies': [],
+        'url': 'http://www.gstatic.com/generate_204',
+        'interval': 300
+    }
+    
+    # 创建并添加国家代理组（只添加有节点的国家）
+    country_groups = []
+    
+    if country_proxies['🇺🇸']:
+        us_group = {
+            'name': '🇺🇸 美国节点',
+            'type': 'url-test',
+            'proxies': country_proxies['🇺🇸'],
+            'url': 'http://www.gstatic.com/generate_204',
+            'interval': 300
+        }
+        country_groups.append(us_group)
+        node_selection_group['proxies'].append('🇺🇸 美国节点')
+    
+    if country_proxies['🇭🇰']:
+        hk_group = {
+            'name': '🇭🇰 香港节点',
+            'type': 'url-test',
+            'proxies': country_proxies['🇭🇰'],
+            'url': 'http://www.gstatic.com/generate_204',
+            'interval': 300
+        }
+        country_groups.append(hk_group)
+        node_selection_group['proxies'].append('🇭🇰 香港节点')
+    
+    if country_proxies['🇯🇵']:
+        jp_group = {
+            'name': '🇯🇵 日本节点',
+            'type': 'url-test',
+            'proxies': country_proxies['🇯🇵'],
+            'url': 'http://www.gstatic.com/generate_204',
+            'interval': 300
+        }
+        country_groups.append(jp_group)
+        node_selection_group['proxies'].append('🇯🇵 日本节点')
+    
+    if country_proxies['other']:
+        other_group = {
+            'name': '🌐 其他节点',
+            'type': 'url-test',
+            'proxies': country_proxies['other'],
+            'url': 'http://www.gstatic.com/generate_204',
+            'interval': 300
+        }
+        country_groups.append(other_group)
+        node_selection_group['proxies'].append('🌐 其他节点')
+    
+    # 添加节点选择组和国家分组
+    config['proxy-groups'].append(node_selection_group)
+    config['proxy-groups'].extend(country_groups)
+    
+    # 添加其他功能分组（流媒体、全球直连、隐私保护）
+    if node_selection_group['proxies']:  # 只有当有节点选择组时才添加这些组
+        config['proxy-groups'].extend([
             {
                 'name': '📺 流媒体',
-                'type': 'select',
-                'proxies': ['DIRECT', '🇺🇸 美国节点']
+                'type': 'url-test',
+                'proxies': ['🇺🇸 美国节点'] if country_proxies['🇺🇸'] else ['🚀 节点选择'],
+                'url': 'http://www.gstatic.com/generate_204',
+                'interval': 300
             },
             {
                 'name': '🌍 全球直连',
-                'type': 'select',
-                'proxies': ['DIRECT', '🚀 节点选择']
+                'type': 'url-test',
+                'proxies': ['🚀 节点选择'],
+                'url': 'http://www.gstatic.com/generate_204',
+                'interval': 300
             },
             {
                 'name': '🛡️ 隐私保护',
-                'type': 'select',
-                'proxies': ['DIRECT', '🚀 节点选择']
+                'type': 'url-test',
+                'proxies': ['🚀 节点选择'],
+                'url': 'http://www.gstatic.com/generate_204',
+                'interval': 300
             }
-        ],
+        ])
         
         # 规则配置
-        'rules': [
+        config['rules'] = [
             # Telegram相关规则
             'DOMAIN-SUFFIX,telegram.org,🚀 节点选择',
             'DOMAIN-SUFFIX,t.me,🚀 节点选择',
@@ -129,9 +178,93 @@ def generate_clash_config(proxies):
             # 默认规则
             'MATCH,🚀 节点选择'
         ]
-    }
     
     return config
+
+def check_proxy_port(server, port, proxy_type=None, network=None, timeout=1):
+    """检测代理服务器端口是否可达
+    
+    Args:
+        server: 服务器地址
+        port: 端口号
+        proxy_type: 代理类型（如trojan, vless, hysteria2等）
+        network: 网络类型（tcp/udp）
+        timeout: 超时时间，单位秒
+        
+    Returns:
+        bool: 端口是否可达
+    """
+    try:
+        # 判断是否为UDP端口
+        is_udp = False
+        if network == "udp":
+            is_udp = True
+        elif proxy_type == "hysteria2":
+            # Hysteria2默认使用UDP
+            is_udp = True
+        
+        if is_udp:
+            # UDP端口检测：创建UDP套接字并尝试发送空数据包
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.settimeout(timeout)
+                # 发送一个空数据包
+                s.sendto(b"", (server, port))
+                # 尝试接收响应（可选，有些服务可能不响应）
+                try:
+                    s.recvfrom(1024)
+                except socket.timeout:
+                    # UDP无响应不一定表示端口关闭，只要能发送数据包通常就认为端口是开放的
+                    pass
+                return True
+        else:
+            # TCP端口检测（默认）
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(timeout)
+                result = s.connect_ex((server, port))
+                return result == 0
+    except Exception as e:
+        # print(f"端口检测错误 ({server}:{port}): {e}")
+        return False
+
+def batch_check_proxies(proxies, max_workers=100):
+    """批量检测代理节点的端口可达性
+    
+    Args:
+        proxies: 代理节点列表
+        max_workers: 最大线程数
+        
+    Returns:
+        list: 过滤后的有效代理节点列表
+    """
+    print(f"🔍 开始检测 {len(proxies)} 个节点的端口可达性...")
+    
+    valid_proxies = []
+    
+    # 使用线程池并行检测
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # 创建任务字典，键是future对象，值是代理节点
+        future_to_proxy = {executor.submit(check_proxy_port, 
+                                           proxy['server'], 
+                                           proxy['port'], 
+                                           proxy.get('type'),
+                                           proxy.get('network', 'tcp')): proxy for proxy in proxies}
+        
+        # 显示进度条
+        with tqdm(total=len(future_to_proxy), desc="检测进度", bar_format="{l_bar}{bar} | {n_fmt}/{total_fmt} [{elapsed}<{remaining}]") as pbar:
+            for future in concurrent.futures.as_completed(future_to_proxy):
+                proxy = future_to_proxy[future]
+                try:
+                    is_reachable = future.result()
+                    if is_reachable:
+                        valid_proxies.append(proxy)
+                    else:
+                        print(f"❌ 端口不可达，移除节点: {proxy['name']} ({proxy['server']}:{proxy['port']})")
+                except Exception as e:
+                    print(f"❌ 检测节点失败: {proxy['name']} ({proxy['server']}:{proxy['port']})，错误: {e}")
+                pbar.update(1)
+    
+    print(f"✅ 端口检测完成！有效节点: {len(valid_proxies)}, 移除节点: {len(proxies) - len(valid_proxies)}")
+    return valid_proxies
 
 def main():
     parser = argparse.ArgumentParser(description="🔗 URI 节点转 Clash YAML 工具")
@@ -189,6 +322,9 @@ def main():
             proxies.append(proxy)
         except Exception as e:
             print(f"❌ 跳过无效 URI: {uri}\n   原因: {e}")
+
+    # 批量检测端口可达性
+    proxies = batch_check_proxies(proxies)
 
     # 生成完整的Clash配置
     config = generate_clash_config(proxies)
