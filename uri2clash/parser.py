@@ -27,10 +27,28 @@ def parse_hysteria2(uri: str) -> dict:
 def parse_ss(uri: str) -> dict:
     body = uri[len("ss://"):]
     base, rest = body.split("@", 1)
-    serverport, fragment = rest.split("#", 1)
+    
+    # 处理可能包含查询参数和片段的情况
+    if "#" in rest:
+        # 先分割片段
+        serverport_with_query, fragment = rest.split("#", 1)
+        # 然后分割查询参数
+        if "?" in serverport_with_query:
+            serverport, _ = serverport_with_query.split("?", 1)
+        else:
+            serverport = serverport_with_query
+    else:
+        # 没有片段，直接处理查询参数
+        if "?" in rest:
+            serverport, _ = rest.split("?", 1)
+        else:
+            serverport = rest
+        fragment = ""
+    
+    # 分割服务器和端口
     server, port = serverport.split(":")
-    # 移除端口号中可能存在的斜杠字符
-    port = port.rstrip('/')
+    # 移除端口号中可能存在的斜杠和问号字符
+    port = port.rstrip('/').rstrip('?')
 
     # 解码 base64 编码的认证信息
     try:
@@ -46,7 +64,7 @@ def parse_ss(uri: str) -> dict:
         cipher = "aes-128-gcm"
         password = base
 
-    name = urllib.parse.unquote(fragment)
+    name = urllib.parse.unquote(fragment) if fragment else f"{server}:{port}"
     return {
         "name": name,
         "type": "ss",
