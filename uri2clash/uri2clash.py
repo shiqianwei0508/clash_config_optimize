@@ -67,10 +67,8 @@ def generate_clash_config(proxies):
     # 创建基础节点选择组
     node_selection_group = {
         'name': '🚀 节点选择',
-        'type': 'url-test',
-        'proxies': [],
-        'url': 'http://www.gstatic.com/generate_204',
-        'interval': 300
+        'type': 'select',
+        'proxies': []
     }
     
     # 创建并添加国家代理组（只添加有节点的国家）
