@@ -122,6 +122,19 @@ def generate_clash_config(proxies):
     config['proxy-groups'].append(node_selection_group)
     config['proxy-groups'].extend(country_groups)
     
+    # 添加包含所有节点的url-test分组
+    if proxies:
+        all_nodes_group = {
+            'name': '🌐 所有节点 (自动选择)',
+            'type': 'url-test',
+            'proxies': [proxy['name'] for proxy in proxies],
+            'url': 'http://www.gstatic.com/generate_204',
+            'interval': 300
+        }
+        config['proxy-groups'].append(all_nodes_group)
+        # 将所有节点分组添加到节点选择组中，方便用户选择
+        node_selection_group['proxies'].append(all_nodes_group['name']) if node_selection_group['proxies'] else None
+    
     # 添加其他功能分组（流媒体、全球直连、隐私保护）
     if node_selection_group['proxies']:  # 只有当有节点选择组时才添加这些组
         config['proxy-groups'].extend([

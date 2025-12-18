@@ -159,3 +159,5 @@ uri2clash/url_sample.txt
 uri2clash/clash_config_sample.yaml
 uri2clash/clash_config_ssr.yaml
 uri2clash/clash_config_all_nodes.yaml
+uri2clash/test_output.yaml
+uri2clash/converted.yaml
