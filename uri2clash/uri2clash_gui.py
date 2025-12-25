@@ -156,11 +156,11 @@ class Uri2ClashUI(QMainWindow):
         input_group = QGroupBox("📥 输入设置")
         input_layout = QVBoxLayout()
         
-        # 输入类型选择（文件/URL/剪贴板）
+        # 输入类型选择（文件/URL/手动输入）
         type_layout = QHBoxLayout()
         self.file_radio = QRadioButton("📁 从文件加载")
         self.url_radio = QRadioButton("🌐 从URL加载")
-        self.clipboard_radio = QRadioButton("📋 从剪贴板加载")
+        self.clipboard_radio = QRadioButton("✏️ 手动输入节点")
         self.type_group = QButtonGroup()
         self.type_group.addButton(self.file_radio)
         self.type_group.addButton(self.url_radio)
@@ -188,12 +188,20 @@ class Uri2ClashUI(QMainWindow):
         self.url_edit.setPlaceholderText("输入包含URI节点的URL地址")
         self.url_layout.addWidget(self.url_edit)
         
+        # 手动输入区域
+        self.manual_input_layout = QVBoxLayout()
+        self.manual_input_edit = QTextEdit()
+        self.manual_input_edit.setPlaceholderText("请输入节点URI，每行一个")
+        self.manual_input_edit.setFixedHeight(150)  # 设置固定高度
+        self.manual_input_layout.addWidget(self.manual_input_edit)
+        
         # 连接信号
         self.file_radio.toggled.connect(self.toggle_input_mode)
         
         input_layout.addLayout(type_layout)
         input_layout.addLayout(self.file_layout)
         input_layout.addLayout(self.url_layout)
+        input_layout.addLayout(self.manual_input_layout)
         
         input_group.setLayout(input_layout)
         main_layout.addWidget(input_group)
@@ -248,23 +256,26 @@ class Uri2ClashUI(QMainWindow):
         self.status_bar = self.statusBar()
         self.status_bar.showMessage("就绪")
         
-        # 初始隐藏URL输入区域
+        # 初始隐藏URL和手动输入区域
         self.toggle_input_mode()
         
         # 添加欢迎信息
         self.log_text.append("🎉 欢迎使用 URI 节点转 Clash YAML 工具")
         self.log_text.append("📝 支持的协议: VMess, VLESS, Trojan, Shadowsocks, Hysteria2")
-        self.log_text.append("💡 选择输入方式（文件/URL/剪贴板），设置输出路径，点击'开始转换'按钮")
+        self.log_text.append("💡 选择输入方式（文件/URL/手动输入），设置输出路径，点击'开始转换'按钮")
         self.log_text.append("=" * 80)
     
     def toggle_input_mode(self):
-        """切换输入模式（文件/URL/剪贴板）"""
+        """切换输入模式（文件/URL/手动输入）"""
         is_file_mode = self.file_radio.isChecked()
         is_url_mode = self.url_radio.isChecked()
+        is_manual_mode = self.clipboard_radio.isChecked()
         
+        # 启用/禁用对应的输入控件
         self.file_path_edit.setEnabled(is_file_mode)
         self.browse_btn.setEnabled(is_file_mode)
         self.url_edit.setEnabled(is_url_mode)
+        self.manual_input_edit.setEnabled(is_manual_mode)
     
     def browse_file(self):
         """浏览选择文件"""
@@ -303,13 +314,12 @@ class Uri2ClashUI(QMainWindow):
                 QMessageBox.warning(self, "警告", "请输入有效的URL地址（以http://或https://开头）！")
                 return
             input_type = "url"
-        else:  # 从剪贴板加载
-            clipboard = QApplication.clipboard()
-            clipboard_text = clipboard.text()
-            if not clipboard_text.strip():
-                QMessageBox.warning(self, "警告", "剪贴板为空！")
+        else:  # 手动输入节点
+            manual_text = self.manual_input_edit.toPlainText()
+            if not manual_text.strip():
+                QMessageBox.warning(self, "警告", "请输入节点信息！")
                 return
-            input_source = clipboard_text
+            input_source = manual_text
             input_type = "clipboard"
         
         # 验证输出路径
