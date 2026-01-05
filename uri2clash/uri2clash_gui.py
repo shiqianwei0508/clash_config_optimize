@@ -20,18 +20,18 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 try:
     # 尝试从包导入（从项目根目录运行时）
     from uri2clash.parser import parse_uri
-    from uri2clash.utils import load_uri_file, load_uri_from_url, save_yaml
+    from uri2clash.utils import load_uri_file, load_uri_from_url, load_uri_from_multiple_urls, save_yaml
     from uri2clash.uri2clash import generate_clash_config
 except ImportError:
     # 尝试相对导入（作为包运行时）
     try:
         from .parser import parse_uri
-        from .utils import load_uri_file, load_uri_from_url, save_yaml
+        from .utils import load_uri_file, load_uri_from_url, load_uri_from_multiple_urls, save_yaml
         from .uri2clash import generate_clash_config
     except ImportError:
         # 直接导入（在uri2clash目录内直接运行时）
         from parser import parse_uri
-        from utils import load_uri_file, load_uri_from_url, save_yaml
+        from utils import load_uri_file, load_uri_from_url, load_uri_from_multiple_urls, save_yaml
         from uri2clash import generate_clash_config
 
 class ConversionThread(QThread):
@@ -40,11 +40,12 @@ class ConversionThread(QThread):
     progress_signal = Signal(int)  # 进度信号
     finished_signal = Signal(bool, str)  # 完成信号
     
-    def __init__(self, input_type, input_source, output_path):
+    def __init__(self, input_type, input_source, output_path, multiple_urls=None):
         super().__init__()
         self.input_type = input_type
         self.input_source = input_source
         self.output_path = output_path
+        self.multiple_urls = multiple_urls or []  # 添加多个URL参数
     
     def run(self):
         """执行转换任务"""
@@ -56,8 +57,14 @@ class ConversionThread(QThread):
                 self.log_signal.emit(f"📥 从文件加载节点: {self.input_source}")
                 uris = load_uri_file(self.input_source)
             elif self.input_type == "url":
-                self.log_signal.emit(f"📥 从URL加载节点: {self.input_source}")
-                uris = load_uri_from_url(self.input_source)
+                if self.multiple_urls:  # 如果有多个URL
+                    self.log_signal.emit(f"📥 从 {len(self.multiple_urls)} 个URL加载节点")
+                    for url in self.multiple_urls:
+                        self.log_signal.emit(f"   - {url}")
+                    uris = load_uri_from_multiple_urls(self.multiple_urls)
+                else:  # 单个URL
+                    self.log_signal.emit(f"📥 从URL加载节点: {self.input_source}")
+                    uris = load_uri_from_url(self.input_source)
             else:  # 从剪贴板加载
                 self.log_signal.emit("📋 从剪贴板加载节点...")
                 uris = [line.strip() for line in self.input_source.split('\n') if line.strip()]
@@ -182,11 +189,30 @@ class Uri2ClashUI(QMainWindow):
         self.file_layout.addWidget(self.file_path_edit)
         self.file_layout.addWidget(self.browse_btn)
         
-        # URL输入区域
-        self.url_layout = QHBoxLayout()
+        # URL输入区域 - 支持多个URL输入
+        self.url_input_widget = QWidget()
+        self.url_layout = QVBoxLayout()
+        self.url_input_widget.setLayout(self.url_layout)
+        
+        # 添加第一个URL输入框
+        first_url_layout = QHBoxLayout()
         self.url_edit = QLineEdit()
         self.url_edit.setPlaceholderText("输入包含URI节点的URL地址")
-        self.url_layout.addWidget(self.url_edit)
+        first_url_layout.addWidget(self.url_edit)
+        
+        # 添加URL按钮
+        self.add_url_btn = QPushButton("+")
+        self.add_url_btn.setFixedSize(30, 30)
+        self.add_url_btn.clicked.connect(self.add_url_input)
+        first_url_layout.addWidget(self.add_url_btn)
+        
+        self.url_layout.addLayout(first_url_layout)
+        
+        # 存储所有URL输入框的列表
+        self.url_inputs = [self.url_edit]
+        
+        # 添加删除URL按钮的函数
+        self.url_edit_delete_btns = []
         
         # 手动输入区域
         self.manual_input_layout = QVBoxLayout()
@@ -197,10 +223,11 @@ class Uri2ClashUI(QMainWindow):
         
         # 连接信号
         self.file_radio.toggled.connect(self.toggle_input_mode)
+        self.url_radio.toggled.connect(self.toggle_input_mode)
         
         input_layout.addLayout(type_layout)
         input_layout.addLayout(self.file_layout)
-        input_layout.addLayout(self.url_layout)
+        input_layout.addWidget(self.url_input_widget)
         input_layout.addLayout(self.manual_input_layout)
         
         input_group.setLayout(input_layout)
@@ -263,7 +290,43 @@ class Uri2ClashUI(QMainWindow):
         self.log_text.append("🎉 欢迎使用 URI 节点转 Clash YAML 工具")
         self.log_text.append("📝 支持的协议: VMess, VLESS, Trojan, Shadowsocks, Hysteria2")
         self.log_text.append("💡 选择输入方式（文件/URL/手动输入），设置输出路径，点击'开始转换'按钮")
+        self.log_text.append("💡 在URL模式下，可以点击+号按钮添加多个URL")
         self.log_text.append("=" * 80)
+        
+    def add_url_input(self):
+        """添加一个新的URL输入框"""
+        url_layout = QHBoxLayout()
+        new_url_edit = QLineEdit()
+        new_url_edit.setPlaceholderText("输入包含URI节点的URL地址")
+        url_layout.addWidget(new_url_edit)
+        
+        # 添加删除按钮
+        delete_btn = QPushButton("-")
+        delete_btn.setFixedSize(30, 30)
+        delete_btn.clicked.connect(lambda: self.remove_url_input(new_url_edit, url_layout))
+        url_layout.addWidget(delete_btn)
+        
+        self.url_layout.addLayout(url_layout)
+        
+        # 添加到输入框列表
+        self.url_inputs.append(new_url_edit)
+        self.url_edit_delete_btns.append(delete_btn)
+        
+    def remove_url_input(self, url_edit, url_layout):
+        """删除指定的URL输入框"""
+        # 从列表中移除
+        if url_edit in self.url_inputs:
+            self.url_inputs.remove(url_edit)
+        
+        # 从布局中移除
+        self.url_layout.removeItem(url_layout)
+        
+        # 删除控件
+        url_edit.deleteLater()
+        
+        # 如果没有URL输入框了，添加一个默认的
+        if len(self.url_inputs) == 0:
+            self.add_url_input()
     
     def toggle_input_mode(self):
         """切换输入模式（文件/URL/手动输入）"""
@@ -274,7 +337,14 @@ class Uri2ClashUI(QMainWindow):
         # 启用/禁用对应的输入控件
         self.file_path_edit.setEnabled(is_file_mode)
         self.browse_btn.setEnabled(is_file_mode)
-        self.url_edit.setEnabled(is_url_mode)
+        
+        # 对于URL模式，启用所有URL输入框
+        for url_input in self.url_inputs:
+            url_input.setEnabled(is_url_mode)
+        
+        # 显示/隐藏添加URL按钮
+        self.add_url_btn.setVisible(is_url_mode)
+        
         self.manual_input_edit.setEnabled(is_manual_mode)
     
     def browse_file(self):
@@ -305,14 +375,23 @@ class Uri2ClashUI(QMainWindow):
                 QMessageBox.warning(self, "警告", "输入文件不存在！")
                 return
             input_type = "file"
+            multiple_urls = None
         elif self.url_radio.isChecked():
-            input_source = self.url_edit.text().strip()
-            if not input_source:
-                QMessageBox.warning(self, "警告", "请输入URL地址！")
+            # 获取所有有效的URL
+            multiple_urls = []
+            for url_input in self.url_inputs:
+                url_text = url_input.text().strip()
+                if url_text:
+                    if not (url_text.startswith("http://") or url_text.startswith("https://")):
+                        QMessageBox.warning(self, "警告", f"请输入有效的URL地址（以http://或https://开头）！\nURL: {url_text}")
+                        return
+                    multiple_urls.append(url_text)
+            
+            if not multiple_urls:
+                QMessageBox.warning(self, "警告", "请输入至少一个有效的URL地址！")
                 return
-            if not (input_source.startswith("http://") or input_source.startswith("https://")):
-                QMessageBox.warning(self, "警告", "请输入有效的URL地址（以http://或https://开头）！")
-                return
+            
+            input_source = multiple_urls[0]  # 使用第一个URL作为主要输入源
             input_type = "url"
         else:  # 手动输入节点
             manual_text = self.manual_input_edit.toPlainText()
@@ -321,6 +400,7 @@ class Uri2ClashUI(QMainWindow):
                 return
             input_source = manual_text
             input_type = "clipboard"
+            multiple_urls = None
         
         # 验证输出路径
         output_path = self.output_path_edit.text().strip()
@@ -335,7 +415,11 @@ class Uri2ClashUI(QMainWindow):
         self.status_bar.showMessage("转换中...")
         
         # 创建转换线程
-        self.conversion_thread = ConversionThread(input_type, input_source, output_path)
+        if input_type == "url":
+            self.conversion_thread = ConversionThread(input_type, input_source, output_path, multiple_urls)
+        else:
+            self.conversion_thread = ConversionThread(input_type, input_source, output_path)
+        
         self.conversion_thread.log_signal.connect(self.append_log)
         self.conversion_thread.progress_signal.connect(self.update_progress)
         self.conversion_thread.finished_signal.connect(self.on_conversion_finished)
